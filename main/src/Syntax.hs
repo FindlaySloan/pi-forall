@@ -266,6 +266,12 @@ sigmaName :: TCName
 sigmaName = "Sigma"
 prodName :: DCName
 prodName = "Prod"
+listName :: TCName
+listName = "List"
+nilName :: DCName
+nilName = "Nil"
+consName :: DCName
+consName = "Cons"
 boolName :: TCName
 boolName = "Bool"
 trueName :: DCName
@@ -278,19 +284,31 @@ litUnitName :: DCName
 litUnitName = "()"
 
 initialTCNames :: Set TCName
-initialTCNames = Set.fromList [sigmaName, boolName, tyUnitName]
+initialTCNames = Set.fromList [sigmaName, boolName, tyUnitName, listName]
 initialDCNames :: Set DCName
-initialDCNames = Set.fromList [prodName, trueName, falseName, litUnitName]
+initialDCNames = Set.fromList [prodName, trueName, falseName, litUnitName, nilName, consName]
 
 preludeDataDecls :: [Decl]
 preludeDataDecls = 
   [ Data sigmaName  sigmaTele      [prodConstructorDef]
   , Data tyUnitName (Telescope []) [unitConstructorDef]
   , Data boolName   (Telescope []) [falseConstructorDef, trueConstructorDef]
+  , Data listName listTele         [nilConstructorDef, consConstructorDef]
   ]  where
         -- boolean
         trueConstructorDef = ConstructorDef internalPos trueName (Telescope [])
         falseConstructorDef = ConstructorDef internalPos falseName (Telescope [])
+
+        -- list
+        listTele = Telescope [TypeSig listType]
+        nilConstructorDef = ConstructorDef internalPos nilName (Telescope [])
+        consConstructorDef = ConstructorDef internalPos consName (Telescope [TypeSig listElem, TypeSig listRec])
+        listType = Sig cName Rel Type -- Type signature of the type of the list
+        listElem = Sig dName Rel (Var cName)
+        listRec = Sig eName Rel (TCon listName [(Arg Rel (Var cName))]) -- Recursive definition of the type
+        cName = Unbound.string2Name "c"
+        dName = Unbound.string2Name "d"
+        eName = Unbound.string2Name "e"
 
         -- unit
         unitConstructorDef = ConstructorDef internalPos litUnitName (Telescope []) 
