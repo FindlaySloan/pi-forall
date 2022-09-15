@@ -71,6 +71,10 @@ data Term
     TyUnit
   | -- | the inhabitant of `Unit`, written `()`
     LitUnit
+  | -- | the type for primitive c type char called `Char`
+    TyChar
+  | -- | the char literal, enclosed by ''
+    LitChar Char
   | -- | the type with two inhabitants (homework) `Bool`
     TyBool
   | -- | `True` and `False`
