@@ -119,6 +119,10 @@ tcTerm TrustMe (Just ty) = return ty
 tcTerm TyUnit Nothing = return Type
 tcTerm LitUnit Nothing = return TyUnit
 
+-- i-char
+tcTerm TyChar Nothing = return Type
+tcTerm (LitChar c) Nothing = return TyChar
+
 -- i-bool
 tcTerm TyBool Nothing = {- SOLN HW -} return Type
 {- STUBWITH Env.err [DS "unimplemented"] -}
