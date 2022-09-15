@@ -51,6 +51,9 @@ Optional components in this BNF are marked with < >
     | Unit                     Unit type
     | ()                       Unit value
 
+    | Char                     Char type
+    | 'a'                      Char literal
+
     | Bool                     Boolean type
     | True | False             Boolean values
     | if a then b else c       If 
@@ -198,9 +201,10 @@ piforallStyle = Token.LanguageDef
                   ,"TRUSTME"
                   ,"PRINTME"
                   ,"ord" 
-                  ,"Bool", "True", "False" 
+                  ,"Bool", "True", "False"
                   ,"if","then","else"
-                  ,"Unit", "()"                               
+                  ,"Unit", "()"
+                  ,"Char"
                   ]
                , Token.reservedOpNames =
                  ["!","?","\\",":",".",",","<", "=", "+", "-", "*", "^", "()", "_","|","{", "}"]
@@ -499,7 +503,9 @@ factor = choice [ {- SOLN DATA -} varOrCon   <?> "a variable or nullary data con
                   {- SOLN EP -}
                 , impProd    <?> "an implicit function type"
                   {- STUBWITH -}
-                , bconst     <?> "a constant"  
+                , bconst     <?> "a constant"
+                , charType   <?> "a char type"
+                , charLiteral <?> "a char literal"
                 , ifExpr     <?> "an if expression" 
                 , sigmaTy    <?> "a sigma type"  
                 
@@ -534,7 +540,15 @@ lambda = do reservedOp "\\"
 {- STUBWITH         lam x m = Lam (Unbound.bind x m) -}  
 
                             
+charType :: LParser Term
+charType =
+  do reserved "Char"
+     return TyChar
 
+charLiteral :: LParser Term
+charLiteral =
+  do c <- Token.charLiteral tokenizer
+     return (LitChar c)
 
 bconst  :: LParser Term
 {- SOLN DATA -}

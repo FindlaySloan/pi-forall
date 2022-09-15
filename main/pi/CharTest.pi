@@ -1,0 +1,4 @@
+module CharTest where
+
+charId : Char -> Char
+charId = \c . '2'
