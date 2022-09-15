@@ -296,6 +296,8 @@ instance Display Term where
     return $ PP.text "PRINTME"
   display TyUnit = return $ PP.text "Unit"
   display LitUnit = return $ PP.text "()"
+  display TyChar = return $ PP.text "Char"
+  display (LitChar c ) = return $ PP.text (show c)
   display TyBool = return $ PP.text "Bool"
   display (LitBool b) = return $ if b then PP.text "True" else PP.text "False"
   display (If a b c) = do
