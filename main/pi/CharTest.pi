@@ -1,12 +1,14 @@
 module CharTest where
 
 
+
 charId : Char -> Char
 charId = \c . '2'
 
-
-
 r : List Char
-r = Cons 'a' (Cons 'b' Nil)
+r = Cons 'a' (Cons 'a' Nil)
+
+g : List Char
+g = PRINTME
 
 

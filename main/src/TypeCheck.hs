@@ -121,6 +121,8 @@ tcTerm LitUnit Nothing = return TyUnit
 
 -- i-char
 tcTerm TyChar Nothing = return Type
+
+-- i-litchar
 tcTerm (LitChar c) Nothing = return TyChar
 
 -- i-bool
@@ -335,7 +337,7 @@ tcTerm t@(LetPair p bnd) (Just ty) = {- SOLN EQUAL -} do
 {- STUBWITH Env.err [DS "unimplemented"] -}
 
 tcTerm PrintMe (Just ty) = do
-  gamma <- Env.getLocalCtx
+  gamma <- Env.getCtx
   Env.warn [DS "Unmet obligation.\nContext:", DD gamma,
         DS "\nGoal:", DD ty]
   return ty

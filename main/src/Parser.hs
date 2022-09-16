@@ -205,6 +205,7 @@ piforallStyle = Token.LanguageDef
                   ,"if","then","else"
                   ,"Unit", "()"
                   ,"Char"
+                  ,"List"
                   ]
                , Token.reservedOpNames =
                  ["!","?","\\",":",".",",","<", "=", "+", "-", "*", "^", "()", "_","|","{", "}"]
@@ -506,6 +507,7 @@ factor = choice [ {- SOLN DATA -} varOrCon   <?> "a variable or nullary data con
                 , bconst     <?> "a constant"
                 , charType   <?> "a char type"
                 , charLiteral <?> "a char literal"
+                , listType <?> "a list type"
                 , ifExpr     <?> "an if expression" 
                 , sigmaTy    <?> "a sigma type"  
                 
@@ -564,6 +566,11 @@ bconst = choice [reserved "Bool"  >> return TyBool,
                  reserved "Unit"   >> return TyUnit,
                  reserved "()"    >> return LitUnit] -}
 
+listType :: LParser Term
+listType =
+  do reserved "List"
+     a <- expr -- Getting the type of the list
+     return $ TCon listName [(Arg Rel a)]
 
 ifExpr :: LParser Term
 ifExpr = 
