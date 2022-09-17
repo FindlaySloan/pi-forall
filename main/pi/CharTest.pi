@@ -3,6 +3,9 @@ module CharTest where
 charId : Char -> Char
 charId = \c . '2'
 
+e : List Char
+e = "asdfdasfe"
+
 r : List List Char
 r = [['a']]
 

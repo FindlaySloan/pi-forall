@@ -16,7 +16,8 @@ SHELL=/bin/bash
 PASS=Logic Equality Product Nat Fin Vec BoolLib Hw1 Hw2 FinHw \
     Lambda Lambda0 Lambda1 Lambda2 \
 	Lec1 Lec2 Lec3 Lec4 \
-	ListLib NatChurch Product1 Lennart Hurkens Equal CharTest
+	ListLib NatChurch Product1 Lennart Hurkens Equal \
+	CharTest StringTest
  
 # TODO_FAIL are tests that *should* fail but currently pass.
 TODO_FAIL=

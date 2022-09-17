@@ -55,6 +55,8 @@ Optional components in this BNF are marked with < >
     | Char                     Char type
     | 'a'                      Char literal
 
+    | "a"                      String literal
+
     | List a                   Generic List type
 
     | Bool                     Boolean type
@@ -512,6 +514,7 @@ factor = choice [ {- SOLN DATA -} varOrCon   <?> "a variable or nullary data con
                 , bconst     <?> "a constant"
                 , charType   <?> "a char type"
                 , charLiteral <?> "a char literal"
+                , stringLiteral <?> "a string literal"
                 , listLiteral <?> "a list"
                 , ifExpr     <?> "an if expression" 
                 , sigmaTy    <?> "a sigma type"
@@ -598,6 +601,15 @@ listLiteral =
         encode :: [Term] -> Term
         encode [] = DCon nilName []
         encode (x:xs) = DCon consName [(Arg Rel x), (Arg Rel (encode xs))]
+
+stringLiteral :: LParser Term
+stringLiteral =
+  do s <- Token.stringLiteral tokenizer
+     return $ encode s
+     where
+       encode :: [Char] -> Term
+       encode [] = DCon nilName []
+       encode (x:xs) = DCon consName [(Arg Rel (LitChar x)), (Arg Rel (encode xs))]
 
 ifExpr :: LParser Term
 ifExpr = 

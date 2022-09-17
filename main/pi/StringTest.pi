@@ -1,0 +1,22 @@
+module StringTest where
+
+emptyStringLit : List Char
+emptyStringLit = ""
+
+emptyStringNil : List Char
+emptyStringNil = Nil
+
+emptyStringSugar : List Char
+emptyStringSugar = []
+
+singleStringLit : List Char
+singleStringLit = "a"
+
+singleStringCons : List Char
+singleStringCons = Cons 'a' Nil
+
+singleStringSugar : List Char
+singleStringSugar = ['a']
+
+stringInString : List List Char
+stringInString = [""]
