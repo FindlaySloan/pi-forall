@@ -3,7 +3,7 @@
 -- | A parsec-based parser for the concrete syntax
 module Parser
   (
-   parseModuleFile, 
+   parseModuleFile,
    parseModuleImports,
    parseExpr,
    expr,
@@ -18,6 +18,7 @@ import Syntax hiding (moduleImports)
 import qualified Unbound.Generics.LocallyNameless as Unbound
 
 import Text.Parsec hiding (State,Empty)
+import Text.Parsec.Combinator (sepBy, between)
 import Text.Parsec.Expr(Operator(..),Assoc(..),buildExpressionParser)
 import qualified LayoutToken as Token 
 
@@ -53,6 +54,8 @@ Optional components in this BNF are marked with < >
 
     | Char                     Char type
     | 'a'                      Char literal
+
+    | List a                   Generic List type
 
     | Bool                     Boolean type
     | True | False             Boolean values
@@ -208,7 +211,7 @@ piforallStyle = Token.LanguageDef
                   ,"List"
                   ]
                , Token.reservedOpNames =
-                 ["!","?","\\",":",".",",","<", "=", "+", "-", "*", "^", "()", "_","|","{", "}"]
+                 ["!","?","\\",":",".",",","<", "=", "+", "-", "*", "^", "()", "_","|","{", "}", "[", "]", "$"]
                 }
 {- SOLN DATA -}
 tokenizer :: Token.GenTokenParser String [Column] (StateT ConstructorNames Unbound.FreshM)
@@ -478,7 +481,7 @@ funapp = do
   foldl' app f <$> many bfactor
   where
 {- SOLN EP -}
-        bfactor = ((,Irr)  <$> brackets expr) 
+        bfactor = ((,Irr)  <$> brackets expr)
                              <|> ((,Rel) <$> factor)
         app e1 (e2,ep)  =  App e1 (Arg ep e2)
 
@@ -487,14 +490,15 @@ funapp = do
         app e1 e2 = App e1 e2 -}
 
 factor = choice [ {- SOLN DATA -} varOrCon   <?> "a variable or nullary data constructor"
-                  {- STUBWITH Var <$> variable <?> "a variable" -}                
+                  {- STUBWITH Var <$> variable <?> "a variable" -}
+
                 , typen      <?> "Type"
                 , lambda     <?> "a lambda"
                 , try letPairExp  <?> "a let pair"
                 , letExpr <?> "a let"
                   {- SOLN DATA -}
                 , natenc     <?> "a literal"                  
-                , caseExpr   <?> "a case" {- STUBWITH -}
+                , try caseExpr   <?> "a case" {- STUBWITH -}
                   {- SOLN EQUAL -}
                 , substExpr  <?> "a subst"
                 , refl       <?> "Refl"
@@ -502,22 +506,24 @@ factor = choice [ {- SOLN DATA -} varOrCon   <?> "a variable or nullary data con
                 , trustme    <?> "TRUSTME"
                 , printme    <?> "PRINTME"
                   {- SOLN EP -}
-                , impProd    <?> "an implicit function type"
+
+                , try impProd    <?> "an implicit function type"
                   {- STUBWITH -}
                 , bconst     <?> "a constant"
                 , charType   <?> "a char type"
                 , charLiteral <?> "a char literal"
-                , listType <?> "a list type"
+                , listLiteral <?> "a list"
                 , ifExpr     <?> "an if expression" 
-                , sigmaTy    <?> "a sigma type"  
+                , sigmaTy    <?> "a sigma type"
                 
                 , expProdOrAnnotOrParens
                     <?> "an explicit function type or annotated expression"
+                , listType <?> "a list type"
                 ]
 
 {- SOLN EP -}
 impOrExpVar :: LParser (TName, Epsilon)
-impOrExpVar = try ((,Irr) <$> (brackets variable)) 
+impOrExpVar = try ((,Irr) <$> (brackets variable))
               <|> (,Rel) <$> variable
 {- STUBWITH -}
 
@@ -568,9 +574,30 @@ bconst = choice [reserved "Bool"  >> return TyBool,
 
 listType :: LParser Term
 listType =
-  do reserved "List"
-     a <- expr -- Getting the type of the list
-     return $ TCon listName [(Arg Rel a)]
+  choice [ try listTypeA
+         , try listTypeB
+  ] where
+     listTypeA = do reserved "List"
+                    reservedOp "("
+                    a <- expr -- Getting the type of the list
+                    reservedOp ")"
+                    return $ TCon listName [(Arg Rel a)]
+     listTypeB = do reserved "List"
+                    a <- term
+                    return $ TCon listName [(Arg Rel a)]
+
+
+listLiteral :: LParser Term
+listLiteral =
+  do _ <- Token.symbol tokenizer "["
+     x <-  (sepBy (expr) (comma)) -- Reading the comma seperated list of expressions
+--     x <- between (reservedOp "[") (reservedOp "]") (Token.commaSep (expr) )
+     _ <- Token.symbol tokenizer "]"
+     return $ encode x
+      where
+        encode :: [Term] -> Term
+        encode [] = DCon nilName []
+        encode (x:xs) = DCon consName [(Arg Rel x), (Arg Rel (encode xs))]
 
 ifExpr :: LParser Term
 ifExpr = 
@@ -621,7 +648,7 @@ letPairExp = do
 -- These have the syntax [x:a] -> b or [a] -> b .
 impProd :: LParser Term
 impProd =
-  do (x,tyA) <- brackets 
+  do (x,tyA) <- brackets
        (try ((,) <$> variable <*> (colon >> expr))
         <|> ((,) <$> Unbound.fresh wildcardName <*> expr))
      reservedOp "->" 
@@ -686,7 +713,7 @@ pattern :: LParser Pattern
 pattern =  try (PatCon <$> dconstructor <*> many arg_pattern)
        <|> atomic_pattern
   where
-    arg_pattern    =  ((,Irr) <$> brackets pattern) 
+    arg_pattern    =  ((,Irr) <$> brackets pattern)
                   <|> ((,Rel) <$> atomic_pattern)
     paren_pattern  = do 
       pattern >>= \p ->

@@ -7,7 +7,7 @@ module Lambda0 where
   
 
 import Nat     
-import List
+import ListLib
 
 -- A small language of lambda-calculus expressions
 

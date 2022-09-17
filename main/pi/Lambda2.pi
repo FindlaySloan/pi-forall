@@ -18,9 +18,6 @@ data Ty : Type where
    TyFun of (Ty)(Ty)
    TyNat 
 
-data List (a : Type) : Type where
-   Nil 
-   Cons of (a) (List a)
 
 data VarRef (n : List Ty) (t : Ty) : Type where
    VZ of [ts : List Ty][n = Cons t ts]
