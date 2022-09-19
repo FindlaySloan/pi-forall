@@ -75,6 +75,7 @@ library
     Syntax
     TypeCheck
     Arbitrary
+    Translator
   
 executable pi-forall
   import: shared-properties

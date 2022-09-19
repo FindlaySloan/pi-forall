@@ -1,0 +1,5 @@
+module Translate where
+
+doSomething : Char -> Char -> Char
+doSomething = \ a b . a
+

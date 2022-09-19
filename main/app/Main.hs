@@ -10,11 +10,13 @@ import PrettyPrint ( render, Disp(..) )
 import Environment ( emptyEnv, runTcMonad )
 import TypeCheck ( tcModules, inferType )
 import Parser ( parseExpr )
-import Text.ParserCombinators.Parsec.Error ( errorPos, ParseError ) 
+import Translator ( translate )
+import Text.ParserCombinators.Parsec.Error ( errorPos, ParseError )
 import Control.Monad.Except ( runExceptT )
 import System.Environment(getArgs)
 import System.Exit (exitFailure,exitSuccess)
 import System.FilePath (splitFileName)
+
 
 exitWith :: Either a b -> (a -> IO ()) -> IO b
 exitWith res f = 
@@ -61,8 +63,10 @@ goFilename pathToMainFile = do
   putStrLn "type checking..."
   d <- runTcMonad emptyEnv (tcModules val)
   defs <- d `exitWith` putTypeError
-  putStrLn $ render $ disp (last defs)
-
+  let interDefs = translate $ last defs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
+  putStrLn $ show interDefs
+--  putStrLn $ render $ disp (last defs)
+--  putStrLn $ show (last defs)
 
 -- | 'pi <filename>' invokes the type checker on the given 
 -- file and either prints the types of all definitions in the module
