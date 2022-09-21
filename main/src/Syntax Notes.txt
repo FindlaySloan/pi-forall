@@ -1,0 +1,87 @@
+doSomething : Char -> Char -> Char
+doSomething = \ a b . a
+
+Module {
+	moduleName = "Translate",
+	moduleImports = [],
+	moduleEntries = [
+		TypeSig (Sig {
+			sigName = doSomething,
+			sigEp = Rel,
+			sigType = Pos "Translate.pi" (line 3, column 15) (Pi Rel TyChar (<_> Pi Rel TyChar (<_1> TyChar)))}),
+		Def doSomething (Pos "Translate.pi" (line 4, column 15)
+			(Lam Rel (<a>
+				Lam Rel (<b>
+					Pos "Translate.pi" (line 4, column 23) (Var 1@0)))))
+	],
+	moduleConstructors = ConstructorNames {
+		tconNames = fromList ["Bool","List","Sigma","Unit"],
+		dconNames = fromList ["()","Cons","False","Nil","Prod","True"]
+		}
+	}
+
+
+doSomething : Char -> Char -> Char
+doSomething = \ a b . ((\c . c) : Char -> Char) 'a'
+
+Module {
+	moduleName = "Translate",
+	moduleImports = [],
+	moduleEntries = [
+		TypeSig (Sig {
+			sigName = doSomething,
+			sigEp = Rel,
+			sigType = Pos "Translate.pi" (line 3, column 15) (Pi Rel (TCon "List" [Arg {argEp = Rel, unArg = TyChar}]) (<_> Pi Rel TyChar (<_1> TyChar)))
+			}),
+		Def doSomething (Pos "Translate.pi" (line 4, column 15)
+			(Lam Rel (<a>
+				Lam Rel (<b>
+					Pos "Translate.pi" (line 4, column 23) (Pos "Translate.pi" (line 4, column 24)
+						(App
+							(Ann
+								(Pos "Translate.pi" (line 4, column 26)
+									(Lam Rel (<c>
+										Pos "Translate.pi" (line 4, column 30) (Var 0@0))))
+								(Pos "Translate.pi" (line 4, column 35) (Pi Rel TyChar (<_4> TyChar))))
+							(Arg {argEp = Rel, unArg = LitChar 'a'})))
+					)
+				)
+			))],
+	moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Sigma","Unit"], dconNames = fromList ["()","Cons","False","Nil","Prod","True"]}}
+
+id : Char -> Char
+id = \a . a
+
+doSomething : Char -> Char -> Char
+doSomething = \ a b .  id a
+
+Module {
+    moduleName = "Translate",
+    moduleImports = [],
+    moduleEntries = [
+        TypeSig (Sig {
+            sigName = id,
+            sigEp = Rel,
+            sigType = Pos "Translate.pi" (line 3, column 6) (Pi Rel TyChar (<_> TyChar))
+        }),
+        Def id (Pos "Translate.pi" (line 4, column 6)
+            (Lam Rel (<a>
+                Pos "Translate.pi" (line 4, column 11) (Var 0@0)))
+        ),
+        TypeSig (Sig {
+            sigName = doSomething,
+            sigEp = Rel,
+            sigType = Pos "Translate.pi" (line 6, column 15) (Pi Rel TyChar (<_1> Pi Rel TyChar (<_2> TyChar)))
+        }),
+        Def doSomething (Pos "Translate.pi" (line 7, column 15)
+            (Lam Rel (<a>
+                Lam Rel (<b>
+                    Pos "Translate.pi" (line 7, column 24)
+                        (App
+                            (App
+                                (Var id)
+                                (Arg {argEp = Rel, unArg = Var 1@0})
+                            )
+                            (Arg {argEp = Rel, unArg = Var 0@0})
+                        )))))],
+    moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Sigma","Unit"], dconNames = fromList ["()","Cons","False","Nil","Prod","True"]}}

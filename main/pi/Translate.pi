@@ -1,5 +1,7 @@
 module Translate where
 
-doSomething : Char -> Char -> Char
-doSomething = \ a b . a
+id : Char -> Char -> Char
+id = \a b .  a
 
+doSomething : Char -> Char -> Char
+doSomething = \ a b .  id a b
