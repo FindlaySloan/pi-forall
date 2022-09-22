@@ -85,3 +85,10 @@ Module {
                             (Arg {argEp = Rel, unArg = Var 0@0})
                         )))))],
     moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Sigma","Unit"], dconNames = fromList ["()","Cons","False","Nil","Prod","True"]}}
+
+-- Done
+id : Char -> Char -> Char
+id = \a b .  a
+
+doSomething : Char -> Char -> Char
+doSomething = \ a b .  id a b

@@ -138,6 +138,8 @@ generateFunctionImpl funcImpl (Pos _ t) =
   generateFunctionImpl funcImpl t
 -- | This will generate for a function application
 generateFunctionImpl f@(FunctionImpl name argNames lines) a@(App term arg) = do
+
+-- TODO UNDO
   let (funcTerm, args) = squashApps a -- Squashing the applications into a function and the list of args
   generateFunctionImplFromApp f funcTerm args
 
@@ -162,13 +164,13 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
   if elem stringVarName argNames -- Checking if the name is in the arguments
     then -- Name is in the arguments, can just use directly
       do -- Getting the type of the variable
-         let newLines = (typeOfVar ++ " " ++ syntheticVar ++ " = " ++ stringVarName) : lines -- Getting the new lines
+         let newLines = ("auto " ++ syntheticVar ++ " = " ++ stringVarName) : lines -- Getting the new lines
              typeOfVar = getTypeOfVariable interDefs name argNames stringVarName
          return $ FunctionImpl name argNames newLines
 
 
     else -- Name is not in the arguments, it is a function or const global variable
-      return UNDEF
+      return UNDEF -- TODO Add to captures
 
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
@@ -187,9 +189,9 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) (Var varName) arg
   let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
   put (interDefs, varNumber + (length args), argSyntheticVars ++ varStack) -- Putting the new vars on the stack
   let stringVarName = Unbound.name2String varName -- Getting the string name
-  let newLines = (funcReturnedType ++ " " ++ syntheticVar ++ " = " ++ castReturn ++ " " ++ functionCall) : lines -- Constructing the new lines
+  let newLines = ("auto " ++ syntheticVar ++ " = " {-- ++ castReturn --} ++ " " ++ functionCall) : lines -- Constructing the new lines
       funcReturnedType = getRetTypeOfFunc interDefs name -- string for the return type
-      castReturn = "(" ++ funcReturnedType ++ ")" -- String for the cast for the function call
+      --castReturn = "(" ++ funcReturnedType ++ ")" -- String for the cast for the function call
       functionCall = stringVarName ++ "(" ++ argVarsAsString ++ ")" -- String for the function call with the args
       argVarsAsString = concat $ intersperse "," argSyntheticVars -- Generating the args string with the generated args
   -- Generating the C code for each of the args. The args need to be reversed as mapM is a foldr, so it will generate
