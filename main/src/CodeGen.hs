@@ -2,30 +2,42 @@ module CodeGen where
 
 import Translator
 import Data.List (intersperse)
+import Control.Monad.State
+
+type GeneratorState = [InterDef]
+
+startGeneratorState :: GeneratorState
+startGeneratorState = []
 
 -- | The code generation function entry point. It will take a list of the intermediate representations
 -- | and output a list of strings that is the C code for each representation.
 generateCCode :: [InterDef] -> [String]
-generateCCode interDefs = map generateInterDef interDefs
+generateCCode interDefs =  evalState (mapM generateInterDef interDefs) interDefs
 
-
+addNewline :: String -> String
+addNewline s = s ++ "\n"
 
 -- | This function will generate the C code for a single intermediate representation
-generateInterDef :: InterDef -> String
-generateInterDef i@(FunctionDef funcName args returnType) = ""
-generateInterDef i@(FunctionImpl funcName args lines) = generateInterDefForFunctionImpl i
+generateInterDef :: InterDef -> State GeneratorState String
+generateInterDef i@(FunctionDef funcName args retType def) = do
+  s <- generateInterDefForFunctionDef i
+  return $ addNewline s
+generateInterDef i@(FunctionImpl funcName args lines) = do
+  s <- generateInterDefForFunctionImpl i
+  return $ addNewline s
 generateInterDef (UNDEF) = undefined -- TODO Remove
 
----- | Generates the C code for the function definition intermediate representation
---generateInterDefForFunctionDef :: InterDef -> String
---generateInterDefForFunctionDef f@(FunctionDef funcName args returnType) =
---  "const auto " ++ stdFuncType ++ funcName
---  where stdFuncType
+
+-- | Generates the C code for the function definition intermediate representation
+generateInterDefForFunctionDef :: InterDef -> State GeneratorState String
+generateInterDefForFunctionDef f@(FunctionDef funcName args returnType def) =
+  return $ "extern " ++ def ++ " " ++ funcName ++ ";"
 
 -- | Generates the code for the function implementation intermediate representation
-generateInterDefForFunctionImpl :: InterDef -> String
-generateInterDefForFunctionImpl (FunctionImpl funcName args lines) =
-  "auto " ++ funcName ++ " = " ++ (lambdas args [] "") ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};"  )
+generateInterDefForFunctionImpl :: InterDef -> State GeneratorState String
+generateInterDefForFunctionImpl (FunctionImpl funcName args lines) = do
+  interDefs <- get
+  return $ (funcDefString interDefs) ++ funcName ++ " = " ++ (lambdas args [] "") ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};"  )
    where
      lambdas :: [String] -> [String] -> String -> String
      lambdas [] _ acc = acc
@@ -36,3 +48,7 @@ generateInterDefForFunctionImpl (FunctionImpl funcName args lines) =
 
      captures :: [String] -> String
      captures args = concat $ intersperse "," args
+
+     funcDefString interDefs =
+       let funcDef = head [f | f@(FunctionDef funcName _ _ _) <- interDefs ]
+       in definition funcDef
