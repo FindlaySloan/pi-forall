@@ -1,4 +1,4 @@
-SOURCES=TypeCheck.hs PrettyPrint.hs LayoutToken.hs Parser.hs Syntax.hs Environment.hs Modules.hs Arbitrary.hs Equal.hs 
+SOURCES=TypeCheck.hs PrettyPrint.hs LayoutToken.hs Parser.hs Syntax.hs Environment.hs Modules.hs Arbitrary.hs Equal.hs Translator.hs CodeGen.hs
 TEST_VERSION1 = Lec1.pi 
 TEST_VERSION2 = $(TEST_VERSION1) Lec2.pi Hw1.pi Hw2.pi NatChurch.pi
 TEST_VERSION3 = $(TEST_VERSION2) Lec3.pi

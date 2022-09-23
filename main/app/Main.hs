@@ -11,11 +11,13 @@ import Environment ( emptyEnv, runTcMonad )
 import TypeCheck ( tcModules, inferType )
 import Parser ( parseExpr )
 import Translator ( translate )
+import CodeGen (generateCCode)
 import Text.ParserCombinators.Parsec.Error ( errorPos, ParseError )
 import Control.Monad.Except ( runExceptT )
 import System.Environment(getArgs)
 import System.Exit (exitFailure,exitSuccess)
 import System.FilePath (splitFileName)
+
 
 
 exitWith :: Either a b -> (a -> IO ()) -> IO b
@@ -65,6 +67,8 @@ goFilename pathToMainFile = do
   defs <- d `exitWith` putTypeError
   let interDefs = translate $ last defs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
   putStrLn $ show interDefs
+  putStrLn $ "-----------CODE TIME-------------"
+  putStrLn $ concat $ generateCCode interDefs
 --  putStrLn $ render $ disp (last defs)
 --  putStrLn $ show (last defs)
 

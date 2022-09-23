@@ -76,6 +76,7 @@ library
     TypeCheck
     Arbitrary
     Translator
+    CodeGen
   
 executable pi-forall
   import: shared-properties
