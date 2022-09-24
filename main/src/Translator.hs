@@ -42,7 +42,7 @@ getVarName i = "_" ++ (show i)
 -- | This function will take in the list of intermediate representations, the name of the function that the
 -- | variable is in, and the variable name. It will return the type of the variable passed in
 getTypeOfVariable :: [InterDef] -> String -> [String] -> String -> String
-getTypeOfVariable interDefs funcName argNames varName = let funcDef = head [f | f@(FunctionDef funcName _ _ _) <- interDefs ]
+getTypeOfVariable interDefs funcName argNames varName = let funcDef = head $ filter (\f -> functionName f == funcName ) [f | f@(FunctionDef name _ _ _) <- interDefs ]
                                                             index = case elemIndex varName argNames of
                                                               Nothing -> undefined -- Impossible
                                                               Just x  -> x
@@ -51,10 +51,16 @@ getTypeOfVariable interDefs funcName argNames varName = let funcDef = head [f | 
 -- | This function will take in the list of intermediate representations and the name of the function. It will
 -- | then return the return type of the named function
 getRetTypeOfFunc :: [InterDef] -> String -> String
-getRetTypeOfFunc interDefs funcName = let funcDef = head [f | f@(FunctionDef funcName _ _ _) <- interDefs]
+getRetTypeOfFunc interDefs fName = let funcDef = head $ filter (\f -> functionName f == fName ) [f | f@(FunctionDef _ _ _ _) <- interDefs]
                                       in returnType funcDef
 
 
+-- | This function will take in a name and check if it is defined in the global state
+isDefined :: [InterDef] -> String -> Bool
+isDefined interDefs name = let funcDef = filter (\f -> functionName f == name ) [f | f@(FunctionDef _ _ _ _) <- interDefs]
+                           in case funcDef of
+                                [] -> False -- Empty list so no decleration
+                                _  -> True  -- Non Empty list so there is decleration
 -- Main translator function
 translate :: Module -> [InterDef]
 translate m = let (interDefs, _, _, _) = execState (translateModuleEntries $ moduleEntries m) startTranslatorState
@@ -140,6 +146,10 @@ generateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
 -- | This will skip over a Pos term and then generate for the innter term
 generateFunctionImpl funcImpl (Pos _ t) =
   generateFunctionImpl funcImpl t
+-- | This will handle when the term is an annotated term
+generateFunctionImpl funcImpl (Ann term termType) = do
+  generateFunctionImpl funcImpl term
+-- | This will handle when the term is a lambda, an construct a std::function
 generateFunctionImpl f@(FunctionImpl name argNames _) l@(Lam ep bnd) = do
   let (varBnd, term) = unsafeUnbind bnd
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
@@ -147,9 +157,16 @@ generateFunctionImpl f@(FunctionImpl name argNames _) l@(Lam ep bnd) = do
   let stringVarName = Unbound.name2String varBnd
   put (interDefs, varNumber + 1, ((getVarName $ varNumber + 1) : varStack), captureStack)
   bndInterDef <- generateFunctionImpl f term
-  (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
-  put (interDefs, varNumber, tail varStack, delete stringVarName captureStack)
-  let cLambda = "[" ++ (captures $ delete stringVarName captureStack) ++ "](auto " ++ stringVarName ++ ") { auto " ++ (head varStack) ++ " = " ++ (innerLines bndInterDef) ++ "; return " ++ syntheticVariable  ++ ";}"
+  (interDefs, varNumber, varStack, captureStack) <- get
+  start <- case varStack of 
+            [] -> do
+              put (interDefs, varNumber, varStack, delete stringVarName captureStack)
+              return ""
+            _  -> do
+              put (interDefs, varNumber, tail varStack, delete stringVarName captureStack)
+              return $ "auto " ++ (head varStack) ++ " = "
+
+  let cLambda = start ++ "[" ++ (captures $ delete stringVarName captureStack) ++ "](auto " ++ stringVarName ++ ") { "{--auto " ++ (head varStack) ++ " = " --}++ (innerLines bndInterDef) ++ "; return " ++ syntheticVariable  ++ ";}"
 
   return $ FunctionImpl name argNames [cLambda]
   where innerLines bndInterDef = case bndInterDef of
@@ -181,49 +198,76 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
 
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
   let stringVarName = Unbound.name2String varName -- Getting the name of the variable
-  let syntheticVar = head varStack -- Popping the synthetic variable from the stack
-  put (interDefs, varNumber, varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
+  start <- case varStack of 
+    [] -> do case isDefined interDefs stringVarName of
+              True  -> put (interDefs, varNumber, tail varStack, captureStack)
+              False -> put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
+             return ""
+          
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state
+             case isDefined interDefs stringVarName of
+              True  -> put (interDefs, varNumber, tail varStack, captureStack)
+              False -> put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
+             return $ "auto " ++ syntheticVar ++ " = "
 
-  let newLines = (stringVarName) : lines -- Getting the new lines
+  -- Updateing state
+  case isDefined interDefs stringVarName of
+    True  -> put (interDefs, varNumber, tail varStack, captureStack)
+    False -> put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
+
+  
+  let newLines = (start ++ stringVarName) : lines -- Getting the new lines
   return $ FunctionImpl name argNames newLines
---  if elem stringVarName argNames -- Checking if the name is in the arguments
---    then -- Name is in the arguments, can just use directly
---      do -- Getting the type of the variable
---         let newLines = ("auto " ++ syntheticVar ++ " = " ++ stringVarName) : lines -- Getting the new lines
---             typeOfVar = getTypeOfVariable interDefs name argNames stringVarName
---         return $ FunctionImpl name argNames newLines
-----
-----
---    else -- Name is not in the arguments, it is a function or const global variable
---      return UNDEF -- TODO Add to captures
+  
+
+-- | Generates a char literal
+generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
+  return $ FunctionImpl name argNames ((show literal) : lines)
 
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
 -- | lambda or a variable refering a a delcared function. (Note there could be an annotation for the anonomse
--- | lambda function
+-- | lambda function TODO, remove function and replace in calling location
 generateFunctionImplFromApp :: InterDef -> Term -> [Arg] -> State TranslatorState InterDef
 -- | Skips over the position term and generates for the inner term
-generateFunctionImplFromApp funcImpl (Pos _ t) args =
-  generateFunctionImplFromApp funcImpl t args
--- | Handles the case when there is a annotated term
-generateFunctionImplFromApp funcImpl (Ann term termType) args = undefined
-generateFunctionImplFromApp (FunctionImpl name argNames lines) (Var varName) args = do
+-- generateFunctionImplFromApp funcImpl (Pos _ t) args =
+--   generateFunctionImplFromApp funcImpl t args
+-- -- | Handles the case when there is a annotated term
+-- generateFunctionImplFromApp funcImpl (Ann term termType) args = undefined
+generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
-  let syntheticVar = head varStack -- Popping the variable from the stack
+  --let syntheticVar = head varStack -- Popping the variable from the stack
 
   let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
-  put (interDefs, varNumber + (length args), argSyntheticVars ++ (tail varStack), captureStack) -- Putting the new vars on the stack
-  let stringVarName = Unbound.name2String varName -- Getting the string name
-  let newLines = ("auto " ++ syntheticVar ++ " = " {-- ++ castReturn --} ++ " " ++ functionCall) : lines -- Constructing the new lines
-      funcReturnedType = getRetTypeOfFunc interDefs name -- string for the return type
-      --castReturn = "(" ++ funcReturnedType ++ ")" -- String for the cast for the function call
-      functionCall = stringVarName ++ "(" ++ argVarsAsString ++ ")" -- String for the function call with the args
-      argVarsAsString = concat $ intersperse "," argSyntheticVars -- Generating the args string with the generated args
-  -- Generating the C code for each of the args. The args need to be reversed as mapM is a foldr, so it will generate
-  -- the last in list first, but stack needs the first in list to match up the variables
+  put (interDefs, varNumber + (length args),  ( varStack), captureStack) -- Putting the new vars on the stack
+  interDefForTerm <- generateFunctionImpl (FunctionImpl name argNames []) t -- Generating interDef for the term
+  let newLines = ({--"auto " ++ syntheticVar ++ " = " ++ " " ++ --}(concat functionCall)) : lines
+      functionCall = (cLines interDefForTerm) ++ [argsAsString]
+      argsAsString = concat $ map (\s ->  "(" ++ s ++ ")") argSyntheticVars
+  (interDefs, varNumber, varStack , captureStack) <- get -- Getting new state
+  put (interDefs, varNumber + (length args),  argSyntheticVars ++( varStack), captureStack) -- Putting the new vars on the stack
   interDefsForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
-  -- Combining the lines generated for the args to the already generated lines into a new InterDef
   return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines)
+  
+
+-- generateFunctionImplFromApp (FunctionImpl name argNames lines) (Var varName) args = do
+--   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
+--   let syntheticVar = head varStack -- Popping the variable from the stack
+
+--   let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
+--   put (interDefs, varNumber + (length args), argSyntheticVars ++ (tail varStack), captureStack) -- Putting the new vars on the stack
+--   let stringVarName = Unbound.name2String varName -- Getting the string name
+--   let newLines = ("auto " ++ syntheticVar ++ " = " {-- ++ castReturn --} ++ " " ++ functionCall) : lines -- Constructing the new lines
+--       funcReturnedType = getRetTypeOfFunc interDefs name -- string for the return type
+--       --castReturn = "(" ++ funcReturnedType ++ ")" -- String for the cast for the function call
+--       functionCall = stringVarName ++ "(" ++ argVarsAsString ++ ")" -- String for the function call with the args
+--       argVarsAsString = concat $ intersperse "," argSyntheticVars -- Generating the args string with the generated args
+--   -- Generating the C code for each of the args. The args need to be reversed as mapM is a foldr, so it will generate
+--   -- the last in list first, but stack needs the first in list to match up the variables
+--   interDefsForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
+--   -- Combining the lines generated for the args to the already generated lines into a new InterDef
+--   return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines)
 
 
 
