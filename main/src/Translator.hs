@@ -148,8 +148,8 @@ generateFunctionImpl f@(FunctionImpl name argNames _) l@(Lam ep bnd) = do
   put (interDefs, varNumber + 1, ((getVarName $ varNumber + 1) : varStack), captureStack)
   bndInterDef <- generateFunctionImpl f term
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
-  put (interDefs, varNumber, varStack, delete stringVarName captureStack)
-  let cLambda = "[" ++ (captures $ delete stringVarName captureStack) ++ "](auto " ++ stringVarName ++ ") { auto " ++ syntheticVariable ++ " = " ++ (innerLines bndInterDef) ++ "; return " ++ syntheticVariable  ++ ";}"
+  put (interDefs, varNumber, tail varStack, delete stringVarName captureStack)
+  let cLambda = "[" ++ (captures $ delete stringVarName captureStack) ++ "](auto " ++ stringVarName ++ ") { auto " ++ (head varStack) ++ " = " ++ (innerLines bndInterDef) ++ "; return " ++ syntheticVariable  ++ ";}"
 
   return $ FunctionImpl name argNames [cLambda]
   where innerLines bndInterDef = case bndInterDef of
@@ -182,7 +182,7 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
   let stringVarName = Unbound.name2String varName -- Getting the name of the variable
   let syntheticVar = head varStack -- Popping the synthetic variable from the stack
-  put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
+  put (interDefs, varNumber, varStack, captureStack ++ [stringVarName]) -- Updateing the state so the variable stack and capture stack is updated
 
   let newLines = (stringVarName) : lines -- Getting the new lines
   return $ FunctionImpl name argNames newLines
@@ -212,7 +212,7 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) (Var varName) arg
   let syntheticVar = head varStack -- Popping the variable from the stack
 
   let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
-  put (interDefs, varNumber + (length args), argSyntheticVars ++ varStack, captureStack) -- Putting the new vars on the stack
+  put (interDefs, varNumber + (length args), argSyntheticVars ++ (tail varStack), captureStack) -- Putting the new vars on the stack
   let stringVarName = Unbound.name2String varName -- Getting the string name
   let newLines = ("auto " ++ syntheticVar ++ " = " {-- ++ castReturn --} ++ " " ++ functionCall) : lines -- Constructing the new lines
       funcReturnedType = getRetTypeOfFunc interDefs name -- string for the return type
