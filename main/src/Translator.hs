@@ -6,7 +6,7 @@ import Syntax
 import Unbound.Generics.LocallyNameless qualified as Unbound
 import Unbound.Generics.LocallyNameless.Unsafe (unsafeUnbind)
 import Data.List (elemIndex, intersperse, delete)
-
+import Data.Char (toLower)
 import Control.Monad.State
 
 -- This is the main data structure
@@ -80,7 +80,7 @@ translateModuleEntry :: Decl -> State TranslatorState InterDef
 translateModuleEntry (TypeSig sig) =
   generateFunctionDef (FunctionDef (Unbound.name2String $ sigName sig) [] "" "") (sigType sig)
 translateModuleEntry (Def name term) =
-  initialGenerateFunctionImpl (FunctionImpl (Unbound.name2String $ name) [] []) term
+  generateFunctionImpl (FunctionImpl (Unbound.name2String $ name) [] []) term
 translateModuleEntry (RecDef name term) = undefined
 translateModuleEntry (Demote epsilon) = undefined
 translateModuleEntry (Data tcName telescope constructorDef) = undefined
@@ -110,35 +110,35 @@ generateFunctionDef (FunctionDef name args _ definition) t@(TCon tName tArgs) = 
 
 -- | This function will be used to generate requreid C information for the implementation of the function. It will
 -- | only construct FunctionImpl and no other InterDef's
-initialGenerateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
-initialGenerateFunctionImpl funcImpl t = generateFunctionImpl funcImpl t
+-- initialGenerateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
+-- initialGenerateFunctionImpl funcImpl t = generateFunctionImpl funcImpl t
 -- | Matches with a Pos term and removes and recalls the function
-initialGenerateFunctionImpl funcImpl (Pos _ t) =
-  initialGenerateFunctionImpl funcImpl t
--- | Matches ot a lambda, at this level it means we have some arguments. This will call the function that will
--- | keep matching Lambdas to get all the arguments then parse the final term
-initialGenerateFunctionImpl funcImpl term@(Lam ep bnd) =
-  generateFunctionImplFromLambdas funcImpl term
+-- initialGenerateFunctionImpl funcImpl (Pos _ t) =
+--   initialGenerateFunctionImpl funcImpl t
+-- -- | Matches ot a lambda, at this level it means we have some arguments. This will call the function that will
+-- -- | keep matching Lambdas to get all the arguments then parse the final term
+-- initialGenerateFunctionImpl funcImpl term@(Lam ep bnd) =
+--   generateFunctionImplFromLambdas funcImpl term
 -- | Otherwise no specific argments given to the function, and parses the term
 
 -- | This function will be called when an initial function implementation is generated and a lambda is found.
 -- | It will extract all of the arg names before going back to general parse
-generateFunctionImplFromLambdas :: InterDef -> Term -> State TranslatorState InterDef
--- | Matches with a Pos term and removes and recalls the function
-generateFunctionImplFromLambdas funcImpl (Pos _ t) =
-  generateFunctionImplFromLambdas funcImpl t
--- | Matches with lambda and adds to the list of args and recursivly checks for more lambdas
-generateFunctionImplFromLambdas (FunctionImpl name argNames lines) (Lam ep bnd) =
-  generateFunctionImplFromLambdas (FunctionImpl name (argNames ++ [xName]) lines) term
-      where (xBnd, term) = unsafeUnbind bnd
-            xName = Unbound.name2String xBnd
--- | Reached end of lambdas that contain the arguments, need to have a return statement and then generate the
--- | rest of the implmentation
-generateFunctionImplFromLambdas f@(FunctionImpl name argNames lines) t = do
-  (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
-  put (interDefs, varNumber + 1, ((getVarName $ varNumber + 1) : varStack), captureStack)
-  let newLines = ("return " ++ (getVarName $ varNumber + 1)) : lines
-  generateFunctionImpl (FunctionImpl name argNames newLines) t
+-- generateFunctionImplFromLambdas :: InterDef -> Term -> State TranslatorState InterDef
+-- -- | Matches with a Pos term and removes and recalls the function
+-- generateFunctionImplFromLambdas funcImpl (Pos _ t) =
+--   generateFunctionImplFromLambdas funcImpl t
+-- -- | Matches with lambda and adds to the list of args and recursivly checks for more lambdas
+-- generateFunctionImplFromLambdas (FunctionImpl name argNames lines) (Lam ep bnd) =
+--   generateFunctionImplFromLambdas (FunctionImpl name (argNames ++ [xName]) lines) term
+--       where (xBnd, term) = unsafeUnbind bnd
+--             xName = Unbound.name2String xBnd
+-- -- | Reached end of lambdas that contain the arguments, need to have a return statement and then generate the
+-- -- | rest of the implmentation
+-- generateFunctionImplFromLambdas f@(FunctionImpl name argNames lines) t = do
+--   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
+--   put (interDefs, varNumber + 1, ((getVarName $ varNumber + 1) : varStack), captureStack)
+--   let newLines = ("return " ++ (getVarName $ varNumber + 1)) : lines
+--   generateFunctionImpl (FunctionImpl name argNames newLines) t
 
 -- | This function will generate the C code for a function implementation, but it will be called after checking
 -- | for the inital lambda (which gives the functions args).
@@ -232,6 +232,27 @@ generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
              return $ "auto " ++ syntheticVar ++ " = "
   return $ FunctionImpl name argNames (( start ++ (show literal)) : lines)
 
+-- | Generates for a data constructor
+generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) = 
+  case conName of
+    "True"  -> generateFuncionImplForBoolLiteral f t
+    "False" -> generateFuncionImplForBoolLiteral f t
+    _       -> undefined
+
+
+-- | Handles the special case of booleans
+generateFuncionImplForBoolLiteral :: InterDef -> Term -> State TranslatorState InterDef
+generateFuncionImplForBoolLiteral (FunctionImpl name argNames lines) (DCon conName _) = do
+  (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  start <- case varStack of 
+    [] -> do return ""
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state           
+             put (interDefs, varNumber, tail varStack, captureStack)
+             return $ "auto " ++ syntheticVar ++ " = "
+  return $ FunctionImpl name argNames (( start ++ (map toLower conName)) : lines)
+
+
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
 -- | lambda or a variable refering a a delcared function. (Note there could be an annotation for the anonomse
@@ -286,8 +307,11 @@ generateCType (Pi ep tyA bnd) = do
   tyBndCType <- generateCType (snd $ unsafeUnbind bnd)
   return $ "std::function<" ++ (tyBndCType) ++ "(" ++ tyACType ++ ")>"
 
-generateCType (TCon name args) = return name
-
+generateCType (TCon name args) = 
+  case name of
+    "Bool" -> return "bool" -- Special case for the boolean structure
+    _      -> return name
+    
 
 
 
