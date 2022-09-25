@@ -223,7 +223,14 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
 
 -- | Generates a char literal
 generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
-  return $ FunctionImpl name argNames ((show literal) : lines)
+  (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
+  start <- case varStack of 
+    [] -> do return ""
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state           
+             put (interDefs, varNumber, tail varStack, captureStack)
+             return $ "auto " ++ syntheticVar ++ " = "
+  return $ FunctionImpl name argNames (( start ++ (show literal)) : lines)
 
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
@@ -272,7 +279,13 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
 
 
 generateCType :: Type -> State TranslatorState String
+generateCType (Pos _ t) = generateCType t
 generateCType TyChar = return "char"
+generateCType (Pi ep tyA bnd) = do
+  tyACType <- generateCType tyA -- Generating the C Type for the tyA (the argument)
+  tyBndCType <- generateCType (snd $ unsafeUnbind bnd)
+  return $ "std::function<" ++ (tyBndCType) ++ "(" ++ tyACType ++ ")>"
+
 generateCType (TCon name args) = return name
 
 
