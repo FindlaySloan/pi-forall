@@ -92,3 +92,20 @@ id = \a b .  a
 
 doSomething : Char -> Char -> Char
 doSomething = \ a b .  id a b
+
+
+
+data Nat : Type where
+  Zero
+  Succ of (Nat)
+
+Module {
+    moduleName = "Translate",
+    moduleImports = [],
+    moduleEntries = [
+        Data "Nat" (Telescope []) [
+            ConstructorDef "pi/Translate.pi" (line 7, column 3) "Zero" (Telescope []),
+            ConstructorDef "pi/Translate.pi" (line 8, column 3) "Succ" (Telescope [TypeSig (Sig {sigName = _, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 8, column 12) (TCon "Nat" [])})])
+        ]],
+    moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Nat","Sigma","Unit"],
+    dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}

@@ -282,11 +282,17 @@ tyUnitName :: TCName
 tyUnitName = "Unit"
 litUnitName :: DCName
 litUnitName = "()"
+natName :: TCName
+natName = "Nat"
+zeroName :: DCName
+zeroName = "Zero"
+succName :: DCName
+succName = "Succ"
 
 initialTCNames :: Set TCName
-initialTCNames = Set.fromList [sigmaName, boolName, tyUnitName, listName]
+initialTCNames = Set.fromList [sigmaName, boolName, tyUnitName, listName, natName]
 initialDCNames :: Set DCName
-initialDCNames = Set.fromList [prodName, trueName, falseName, litUnitName, nilName, consName]
+initialDCNames = Set.fromList [prodName, trueName, falseName, litUnitName, nilName, consName, zeroName, succName]
 
 preludeDataDecls :: [Decl]
 preludeDataDecls = 
@@ -294,6 +300,7 @@ preludeDataDecls =
   , Data tyUnitName (Telescope []) [unitConstructorDef]
   , Data boolName   (Telescope []) [falseConstructorDef, trueConstructorDef]
   , Data listName listTele         [nilConstructorDef, consConstructorDef]
+  , Data natName (Telescope [])    [zeroConstructorDef, succConstructorDef]
   ]  where
         -- boolean
         trueConstructorDef = ConstructorDef internalPos trueName (Telescope [])
@@ -322,6 +329,12 @@ preludeDataDecls =
         sigY = Sig yName Rel (App (Var bName) (Arg Rel (Var xName)))
         aName = Unbound.string2Name "a"
         bName = Unbound.string2Name "b"
+
+        -- Nat type
+        zeroConstructorDef = ConstructorDef internalPos zeroName (Telescope [])
+        succConstructorDef = ConstructorDef internalPos succName (Telescope [TypeSig natRec])
+        natRec = Sig fName Rel (TCon natName [])
+        fName = Unbound.string2Name "f"
 {- STUBWITH -}
 -----------------
 

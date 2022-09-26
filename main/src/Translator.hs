@@ -3,6 +3,7 @@ module Translator where
 
 -- Imports
 import Syntax
+
 import Unbound.Generics.LocallyNameless qualified as Unbound
 import Unbound.Generics.LocallyNameless.Unsafe (unsafeUnbind)
 import Data.List (elemIndex, intersperse, delete)
@@ -235,14 +236,16 @@ generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
 -- | Generates for a data constructor
 generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) = 
   case conName of
-    "True"  -> generateFuncionImplForBoolLiteral f t
-    "False" -> generateFuncionImplForBoolLiteral f t
+    "True"  -> generateFunctionImplForBoolLiteral f t
+    "False" -> generateFunctionImplForBoolLiteral f t
+    "Zero"  -> generateFunctionImplForNatLiteral f t
+    "Succ"  -> generateFunctionImplForNatLiteral f t
     _       -> undefined
 
 
 -- | Handles the special case of booleans
-generateFuncionImplForBoolLiteral :: InterDef -> Term -> State TranslatorState InterDef
-generateFuncionImplForBoolLiteral (FunctionImpl name argNames lines) (DCon conName _) = do
+generateFunctionImplForBoolLiteral :: InterDef -> Term -> State TranslatorState InterDef
+generateFunctionImplForBoolLiteral (FunctionImpl name argNames lines) (DCon conName _) = do
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state -- TODO REFACTOR THIS OUT
   start <- case varStack of 
     [] -> do return ""
@@ -252,6 +255,20 @@ generateFuncionImplForBoolLiteral (FunctionImpl name argNames lines) (DCon conNa
              return $ "auto " ++ syntheticVar ++ " = "
   return $ FunctionImpl name argNames (( start ++ (map toLower conName)) : lines)
 
+-- Handles the special case of the natural numbers
+generateFunctionImplForNatLiteral :: InterDef -> Term -> State TranslatorState InterDef
+generateFunctionImplForNatLiteral (FunctionImpl name argNames lines) t = do
+  (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  start <- case varStack of
+    [] -> do return ""
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state
+             put (interDefs, varNumber, tail varStack, captureStack)
+             return $ "auto " ++ syntheticVar ++ " = "
+  let number = case isNumeral t of
+                Nothing -> undefined
+                Just x  -> x
+  return $ FunctionImpl name argNames (( start ++ (show number)) : lines)
 
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
@@ -310,6 +327,7 @@ generateCType (Pi ep tyA bnd) = do
 generateCType (TCon name args) = 
   case name of
     "Bool" -> return "bool" -- Special case for the boolean structure
+    "Nat"  -> return "int"  -- Special case for the natural structure
     _      -> return name
     
 

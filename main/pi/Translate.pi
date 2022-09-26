@@ -3,7 +3,15 @@ module Translate where
 -- id : Char -> Char -> Char
 -- id = \a b.  a
 
+data Nati : Type where
+  Zero
+  Succ of (Nati)
 
 
-doSomething : Bool -> Bool -> Bool
-doSomething = \a b . True 
+pred : Nati -> Nati
+pred = \n . case n of
+  Zero -> Zero
+  Succ n' -> n'
+
+-- doSomething : Nat -> Nat -> Nat
+-- doSomething = \a b . 7
