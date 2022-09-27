@@ -1,0 +1,19 @@
+module IO where
+
+data IO (A : Type) : Type where
+    IOCon of (A)
+
+return : [A : Type] -> A -> IO A
+return = \[A] a . IOCon a
+
+bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
+bindEq = \ [A] [B] a f . case a of
+                            IOCon inner -> f inner
+
+bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
+bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
+
+print : List Char -> IO Unit
+print = TRUSTME
+
+
