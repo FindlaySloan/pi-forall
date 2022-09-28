@@ -1,17 +1,17 @@
 module Translate where
 
--- id : Char -> Char -> Char
--- id = \a b.  a
+--id : Char -> Char -> Char
+--id = \a b.  a
 
 data Nati : Type where
-  Zero
-  Succ of (Nati)
+  Zeroi
+  Succi of (Nati)
 
 
 pred : Nati -> Nati
 pred = \n . case n of
-  Zero -> Zero
-  Succ n' -> n'
+  Zeroi -> Zeroi
+  Succi nn -> nn
 
 -- doSomething : Nat -> Nat -> Nat
 -- doSomething = \a b . 7

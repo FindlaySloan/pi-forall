@@ -65,12 +65,15 @@ goFilename pathToMainFile = do
   putStrLn "type checking..."
   d <- runTcMonad emptyEnv (tcModules val)
   defs <- d `exitWith` putTypeError
---  let interDefs = translate $ last defs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
---  putStrLn $ show interDefs
---  putStrLn $ "-----------CODE TIME-------------"
---  putStrLn $ concat $ generateCCode interDefs
---  putStrLn $ render $ disp (last defs)
+  putStrLn $ "-----------AST TIME---------------"
   putStrLn $ show (last defs)
+  putStrLn $ "-----------INTERDEF TIME-------------"
+  let interDefs = translate $ last defs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
+  putStrLn $ show interDefs
+  putStrLn $ "-----------CODE TIME-------------"
+  putStrLn $ concat $ generateCCode interDefs
+--  putStrLn $ render $ disp (last defs)
+
 
 -- | 'pi <filename>' invokes the type checker on the given 
 -- file and either prints the types of all definitions in the module

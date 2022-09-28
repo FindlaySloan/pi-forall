@@ -109,3 +109,39 @@ Module {
         ]],
     moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Nat","Sigma","Unit"],
     dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}
+
+
+
+------
+
+data Nati : Type where
+  Zero
+  Succ of (Nati)
+
+
+pred : Nati -> Nati
+pred = \n . case n of
+  Zero -> Zero
+  Succ n' -> n'
+
+Module {
+    moduleName = "Translate",
+    moduleImports = [],
+    moduleEntries = [
+        Data "Nati" (Telescope []) [
+            ConstructorDef "pi/Translate.pi" (line 7, column 3) "Zero" (Telescope []),
+            ConstructorDef "pi/Translate.pi" (line 8, column 3) "Succ" (Telescope [
+                TypeSig (Sig {sigName = _, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 8, column 12) (TCon "Nati" [])})]
+                )],
+            TypeSig (Sig {sigName = pred, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 11, column 8) (Pi Rel (TCon "Nati" []) (<_1> TCon "Nati" []))}),
+            Def pred (Pos "pi/Translate.pi" (line 12, column 8) (Lam Rel (<n>
+                Pos "pi/Translate.pi" (line 12, column 13) (Case
+                    (Pos "pi/Translate.pi" (line 12, column 18) (Pos "pi/Translate.pi" (line 12, column 18) (Var 0@0)))
+                    [Match (<(PatCon "Zero" [])> Pos "pi/Translate.pi" (line 13, column 11) (Pos "pi/Translate.pi" (line 13, column 11)
+                        (DCon "Zero" []))),
+                     Match (<(PatCon "Succ" [(PatVar n',Rel)])> Pos "pi/Translate.pi" (line 14, column 14) (Pos "pi/Translate.pi" (line 14, column 14) (Var 0@0)))])))
+                     )],
+            moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Nat","Nati","Sigma","Unit"],
+            dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}
+
+-------

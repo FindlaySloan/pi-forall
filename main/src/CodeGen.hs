@@ -25,6 +25,9 @@ generateInterDef i@(FunctionDef funcName args retType def) = do
 generateInterDef i@(FunctionImpl funcName args lines) = do
   s <- generateInterDefForFunctionImpl i
   return $ addNewline s
+generateInterDef i@(DataType _ _ _ ) = do
+  s <- generateInterDefForDataType i
+  return $ addNewline s
 generateInterDef (UNDEF) = undefined -- TODO Remove
 
 
@@ -52,3 +55,7 @@ generateInterDefForFunctionImpl (FunctionImpl funcName args lines) = do
      funcDefString interDefs =
        let funcDef = head [f | f@(FunctionDef funcName _ _ _) <- interDefs ]
        in definition funcDef
+
+generateInterDefForDataType :: InterDef -> State GeneratorState String
+generateInterDefForDataType (DataType name conNames lines) = do
+  return (concat lines)
