@@ -389,23 +389,36 @@ generateData :: Decl -> State TranslatorState InterDef
 generateData (Data tcName telescope constructorDefs) = do
   let conNames = map (getConName) constructorDefs
   let enumDef =  enumName ++ " {" ++ (concat $ intersperse "," conNames) ++ "};"
-  let mainClassDef = "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data; };"
+  constructorFuncDefs <- mapM (constructorFuncDefsForMainClass tcName) constructorDefs
+  let mainClassDef = "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data;" ++ (concat constructorFuncDefs) ++ "};"
   conClassDefs <- mapM (conClassDef tcName) constructorDefs
+  inlineConstructorDefs <- mapM (inlineConstructorFuncDef tcName) constructorDefs
 --  defs <- conClassDefs
-  return $ DataType tcName conNames ([enumDef, mainClassDef] ++ conClassDefs)
+  return $ DataType tcName conNames ([enumDef, mainClassDef] ++ conClassDefs ++ inlineConstructorDefs)
 
   where enumName = "enum _enum_" ++ tcName ++ "_type"
         getConName (ConstructorDef _ conName _) = conName
+        constructorFuncDefsForMainClass name c@(ConstructorDef _ conName arg) = do
+          attributes <- conClassAttributes c
+          return $ "static _" ++ name  ++ " _" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ");"
+        inlineConstructorFuncDef name c@(ConstructorDef _ conName arg) = do
+           attributes <- conClassAttributes c
+           return $ "inline _" ++ name  ++ " _" ++ name ++ "::_" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ")" ++ "{ " ++ (conType name conName) ++ "* _innerClass = new " ++ (conType name conName) ++ "(" ++ (concat $ intersperse ", " $ map (\x -> head $ tail $ words x) attributes) ++ "); return  _" ++ name ++ "{ " ++ conName ++ ", _innerClass }; };"
+        conType tName conName = "_" ++ tName ++ "_" ++ conName
         conClassDef name c@(ConstructorDef _ conName _) = do
           attributes <- conClassAttributes c
-          return $ "class _" ++ name ++ "_" ++ conName ++ " { public: " ++ attributes ++ " };"
-        conClassAttributes (ConstructorDef _ _ (Telescope decls)) = genConAttributes decls 0 ""
+          constructor <- genConstructor name c
+          return $ "class _" ++ name ++ "_" ++ conName ++ " { public: " ++ (concat $ map (\s -> s ++ ";") attributes) ++ constructor ++ " };"
+        conClassAttributes (ConstructorDef _ _ (Telescope decls)) = genConAttributes decls 0 []
         genConAttributes [] _ acc = return $ acc
         genConAttributes (decl:decls) number acc = let var = getVarName (number + 1)
                                                    in case decl of
                                                         (TypeSig (Sig _ _ sigType)) -> do t <- generateCType sigType
-                                                                                          return $ t ++ " " ++ var ++ ";" ++ acc
+                                                                                          return $ [t ++ " " ++ var] ++ acc
                                                         _             -> undefined -- TODO UPDATE
+        genConstructor tcName c@(ConstructorDef _ conName args) = do
+            attributes <- conClassAttributes c
+            return $ (conType tcName conName) ++ " (" ++ (concat $ intersperse ", " attributes) ++ ") {" ++ (concat $ map (\x -> let y = head $ tail $ words x in "this->" ++ y ++ "= " ++ y ++ ";") attributes) ++ "};"
 
 generateCType :: Type -> State TranslatorState String
 generateCType (Pos _ t) = generateCType t
