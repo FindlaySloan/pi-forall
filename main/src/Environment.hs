@@ -5,6 +5,7 @@ module Environment
   ( TcMonad,
     runTcMonad,
     Env,
+    ctx,
     emptyEnv,
     lookupTy,
     lookupTyMaybe,
@@ -80,7 +81,8 @@ data Env = Env
     sourceLocation :: [SourceLocation] 
   }
 
---deriving Show
+instance Show Env where
+  show (Env ctx g hints s) = show ctx
 
 -- | The initial environment.
 emptyEnv :: Env

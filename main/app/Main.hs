@@ -7,9 +7,10 @@ module Main(goFilename,go,main) where
 
 import Modules (getModules)
 import PrettyPrint ( render, Disp(..) )
-import Environment ( emptyEnv, runTcMonad )
+import Environment ( Env, ctx, emptyEnv, runTcMonad )
 import TypeCheck ( tcModules, inferType )
 import Parser ( parseExpr )
+import Syntax
 import Translator ( translate )
 import CodeGen (generateCCode)
 import Text.ParserCombinators.Parsec.Error ( errorPos, ParseError )
@@ -65,12 +66,19 @@ goFilename pathToMainFile = do
   putStrLn "type checking..."
   d <- runTcMonad emptyEnv (tcModules val)
   defs <- d `exitWith` putTypeError
-  putStrLn $ "-----------AST TIME---------------"
-  putStrLn $ show (last defs)
-  putStrLn $ "-----------INTERDEF TIME-------------"
+--  putStrLn $ "-----------CTX AST---------------"
+--  putStrLn $ show $ ctx emptyEnv
+--  putStrLn $ "-----------CTX INTERDEF---------------"
+--  let cInterDefs = translate $ Module "" [] (ctx emptyEnv) emptyConstructorNames -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
+--  putStrLn $ show cInterDefs
+--  putStrLn $ "-----------CTX CODE---------------"
+--  putStrLn $ concat $ generateCCode cInterDefs
+  putStrLn $ "-----------AST---------------"
+  putStrLn $ show (defs)
+  putStrLn $ "-----------INTERDEF-------------"
   let interDefs = translate $ last defs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
   putStrLn $ show interDefs
-  putStrLn $ "-----------CODE TIME-------------"
+  putStrLn $ "-----------INTERDEF CODE-------------"
   putStrLn $ concat $ generateCCode interDefs
 --  putStrLn $ render $ disp (last defs)
 

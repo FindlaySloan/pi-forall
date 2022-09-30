@@ -1,17 +1,31 @@
 module Translate where
 
+data Maybe (A : Type) : Type where
+   Nothing
+   Just of (A)
+
+f : Bool -> Maybe Char
+f = \b . case b of
+           True -> Nothing
+           False -> Just 'a'
+
 --id : Char -> Char -> Char
 --id = \a b.  a
-
+{--
 data Nati : Type where
   Zeroi
   Succi of (Nati)
 
+show : Nati -> Char
+show = \s . case s of
+    Zeroi -> '0'
+    Succi n -> '1'
 
-pred : Nati -> Nati
+pred : Nati -> Char
 pred = \n . case n of
-  Zeroi -> Zeroi
-  Succi nn -> nn
+  Zeroi -> show Zeroi
+  Succi nn -> show nn
+--}
 
 -- doSomething : Nat -> Nat -> Nat
 -- doSomething = \a b . 7

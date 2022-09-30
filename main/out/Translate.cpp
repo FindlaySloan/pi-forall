@@ -34,10 +34,52 @@ inline _Nati _Nati::_Succi(_Nati _1) {
     _innerClass
   };
 };
+extern std:: function < char(_Nati) > show;
+std:: function < char(_Nati) > show = [](auto s) {
+  auto _1 = [s]() {
+    auto _2 = s;
+    switch (_2.type) {
+    case Zeroi: {
+      auto _4 = * (_Nati_Zeroi * ) _2.data;
+      auto _3 = '0';
+      return _3;
+    }
+    case Succi: {
+      auto _6 = * (_Nati_Succi * ) _2.data;
+      auto n = _6._1;
+      auto _5 = '1';
+      return _5;
+    }
+    }
+  }();
+  return _1;
+};
+extern std:: function < char(_Nati) > pred;
+std:: function < char(_Nati) > pred = [](auto n) {
+  auto _7 = [n]() {
+    auto _8 = n;
+    switch (_8.type) {
+    case Zeroi: {
+      auto _10 = * (_Nati_Zeroi * ) _8.data;
+      auto _11 = _Nati::_Zeroi();
+      auto _9 = show(_11);
+      return _9;
+    }
+    case Succi: {
+      auto _13 = * (_Nati_Succi * ) _8.data;
+      auto nn = _13._1;
+      auto _14 = nn;
+      auto _12 = show(_14);
+      return _12;
+    }
+    }
+  }();
+  return _7;
+};
 
 int main() {
 
-//    std::cout << id(65)(66) << std::endl;
+    std::cout << pred(_Nati::_Succi(_Nati::_Succi(_Nati::_Zeroi()))) << std::endl;
 
     return 0;
 }
