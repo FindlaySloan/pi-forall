@@ -8,10 +8,10 @@ f : Bool -> Maybe Char
 f = \b . case b of
            True -> Nothing
            False -> Just 'a'
-
+{--
 --id : Char -> Char -> Char
 --id = \a b.  a
-{--
+
 data Nati : Type where
   Zeroi
   Succi of (Nati)

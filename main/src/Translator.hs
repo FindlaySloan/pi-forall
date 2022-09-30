@@ -421,28 +421,29 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
 
 generateData :: Decl -> State TranslatorState InterDef
 generateData (Data tcName telescope constructorDefs) = do
+  let templates = genTemplateTypes telescope
   let conNames = map (getConName) constructorDefs
   let enumDef =  enumName ++ " {" ++ (concat $ intersperse "," conNames) ++ "};"
-  constructorFuncDefs <- mapM (constructorFuncDefsForMainClass tcName) constructorDefs
-  let mainClassDef = "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data;" ++ (concat constructorFuncDefs) ++ "};"
-  conClassDefs <- mapM (conClassDef tcName) constructorDefs
-  inlineConstructorDefs <- mapM (inlineConstructorFuncDef tcName) constructorDefs
+  constructorFuncDefs <- mapM (constructorFuncDefsForMainClass tcName templates) constructorDefs
+  let mainClassDef = (genTemplateDef templates) ++ "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data;" ++ (concat constructorFuncDefs) ++ "};"
+  conClassDefs <- mapM (conClassDef tcName templates) constructorDefs
+  inlineConstructorDefs <- mapM (inlineConstructorFuncDef tcName templates) constructorDefs
 --  defs <- conClassDefs
   return $ DataType tcName conNames ([enumDef, mainClassDef] ++ conClassDefs ++ inlineConstructorDefs)
 
   where enumName = "enum _enum_" ++ tcName ++ "_type"
         getConName (ConstructorDef _ conName _) = conName
-        constructorFuncDefsForMainClass name c@(ConstructorDef _ conName arg) = do
+        constructorFuncDefsForMainClass name templates c@(ConstructorDef _ conName arg) = do
           attributes <- conClassAttributes c
-          return $ "static _" ++ name  ++ " _" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ");"
-        inlineConstructorFuncDef name c@(ConstructorDef _ conName arg) = do
+          return $ "static _" ++ name ++ (genTemplateArgs templates) ++ " _" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ");"
+        inlineConstructorFuncDef name templates c@(ConstructorDef _ conName arg) = do
            attributes <- conClassAttributes c
-           return $ "inline _" ++ name  ++ " _" ++ name ++ "::_" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ")" ++ "{ " ++ (conType name conName) ++ "* _innerClass = new " ++ (conType name conName) ++ "(" ++ (concat $ intersperse ", " $ map (\x -> head $ tail $ words x) attributes) ++ "); return  _" ++ name ++ "{ " ++ conName ++ ", _innerClass }; };"
+           return $ (genTemplateDef templates) ++ " inline _" ++ name ++ (genTemplateArgs templates) ++ " _" ++ name ++ (genTemplateArgs templates) ++ "::_" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ")" ++ "{ " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "* _innerClass = new " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "(" ++ (concat $ intersperse ", " $ map (\x -> head $ tail $ words x) attributes) ++ "); return  _" ++ name ++ (genTemplateArgs templates) ++ " { " ++ conName ++ ", _innerClass }; };"
         conType tName conName = "_" ++ tName ++ "_" ++ conName
-        conClassDef name c@(ConstructorDef _ conName _) = do
+        conClassDef name templates c@(ConstructorDef _ conName _) = do
           attributes <- conClassAttributes c
           constructor <- genConstructor name c
-          return $ "class _" ++ name ++ "_" ++ conName ++ " { public: " ++ (concat $ map (\s -> s ++ ";") attributes) ++ constructor ++ " };"
+          return $ (genTemplateDef templates) ++ "class _" ++ name ++ "_" ++ conName ++ " { public: " ++ (concat $ map (\s -> s ++ ";") attributes) ++ constructor ++ " };"
         conClassAttributes (ConstructorDef _ _ (Telescope decls)) = genConAttributes decls 0 []
         genConAttributes [] _ acc = return $ acc
         genConAttributes (decl:decls) number acc = let var = getVarName (number + 1)
@@ -453,6 +454,11 @@ generateData (Data tcName telescope constructorDefs) = do
         genConstructor tcName c@(ConstructorDef _ conName args) = do
             attributes <- conClassAttributes c
             return $ (conType tcName conName) ++ " (" ++ (concat $ intersperse ", " attributes) ++ ") {" ++ (concat $ map (\x -> let y = head $ tail $ words x in "this->" ++ y ++ "= " ++ y ++ ";") attributes) ++ "};"
+        genTemplateTypes (Telescope decls) = map (\(TypeSig (Sig name _ _)) -> Unbound.name2String name) decls
+        genTemplateDef [] = ""
+        genTemplateDef types = "template <" ++ (concat $ intersperse ", " $ map (\t -> "class " ++ t) types) ++ "> "
+        genTemplateArgs [] = ""
+        genTemplateArgs types = "<" ++ (concat $ intersperse "," types) ++ ">"
 
 generateCType :: Type -> State TranslatorState String
 generateCType (Pos _ t) = generateCType t
@@ -466,10 +472,18 @@ generateCType (TCon name args) =
   case name of
     "Bool" -> return "bool" -- Special case for the boolean structure
     "Nat"  -> return "int"  -- Special case for the natural structure
-    _      -> return $ "_" ++ name
+    _      -> do
+      tInfo <- templateInfo args
+      return $ "_" ++ name ++ tInfo
+    where
+      templateInfo [] = return ""
+      templateInfo args = do
+        templates <- mapM (generateCType) $ map (\(Arg ep t) -> t) args
+        return $ "< " ++ ( concat $ intersperse ", " templates )++ " >"
+
 generateCType (Ann t _) = undefined
 generateCType (App term arg) = undefined
-generateCType (Var name) = undefined
+generateCType (Var name) = return $ Unbound.name2String name
 generateCType (Lam ep bnd) = undefined
 
 
