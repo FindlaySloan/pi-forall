@@ -41,6 +41,9 @@ type TranslatorState = ([InterDef] , Int, [String], [String])
 startTranslatorState :: TranslatorState
 startTranslatorState = ([], 0, [], [])
 
+createTranslatorState :: [InterDef] -> TranslatorState
+createTranslatorState initInterDefs = (initInterDefs, 0, [], [])
+
 -- | Function to get a variable name
 getVarName :: Int -> String
 getVarName i = "_" ++ (show i)
@@ -48,22 +51,28 @@ getVarName i = "_" ++ (show i)
 -- | This function will take in the list of intermediate representations, the name of the function that the
 -- | variable is in, and the variable name. It will return the type of the variable passed in
 getTypeOfVariable :: [InterDef] -> String -> [String] -> String -> String
-getTypeOfVariable interDefs funcName argNames varName = let funcDef = head $ filter (\f -> functionName f == funcName ) [f | f@(FunctionDef name _ _ _) <- interDefs ]
+getTypeOfVariable interDefs funcName argNames varName = let funcDef = filter (\f -> functionName f == funcName ) [f | f@(FunctionDef name _ _ _) <- interDefs ]
                                                             index = case elemIndex varName argNames of
                                                               Nothing -> undefined -- Impossible
                                                               Just x  -> x
-                                                        in (args funcDef) !! index
+                                                        in case funcDef of
+                                                          [] -> undefined
+                                                          _  -> (args (head funcDef)) !! index
 
 -- | This function will take in the list of intermediate representations and the name of the function. It will
 -- | then return the return type of the named function
 getRetTypeOfFunc :: [InterDef] -> String -> String
-getRetTypeOfFunc interDefs fName = let funcDef = head $ filter (\f -> functionName f == fName ) [f | f@(FunctionDef _ _ _ _) <- interDefs]
-                                      in returnType funcDef
+getRetTypeOfFunc interDefs fName = let funcDef = filter (\f -> functionName f == fName ) [f | f@(FunctionDef _ _ _ _) <- interDefs]
+                                      in case funcDef of
+                                        [] -> undefined
+                                        _  -> returnType $ head funcDef
 
 -- | This function will take in a constructor name and return the name of the overall type
 getCTypeFromConstructorName :: [InterDef] -> String -> String
-getCTypeFromConstructorName interDefs cName = typeName $ head $ filter (\d -> elem cName $ constructorNames d) [d | d@(DataType _ _ _) <- interDefs]
-
+getCTypeFromConstructorName interDefs cName = let dataTypes = filter (\d -> elem cName $ constructorNames d) [d | d@(DataType _ _ _) <- interDefs]
+                                              in case dataTypes of
+                                                  [] -> undefined
+                                                  _  -> typeName $ head dataTypes
 
 -- | This function will take in a name and check if it is defined in the global state
 isDefined :: [InterDef] -> String -> Bool
@@ -72,8 +81,8 @@ isDefined interDefs name = let funcDef = filter (\f -> functionName f == name ) 
                                 [] -> False -- Empty list so no decleration
                                 _  -> True  -- Non Empty list so there is decleration
 -- Main translator function
-translate :: Module -> [InterDef]
-translate m = let (interDefs, _, _, _) = execState (translateModuleEntries $ moduleEntries m) startTranslatorState
+translate :: Module -> [InterDef] -> [InterDef]
+translate m initInterDefs = let (interDefs, _, _, _) = execState (translateModuleEntries $ moduleEntries m) $ createTranslatorState initInterDefs
               in interDefs
 -- Translating the module entries
 translateModuleEntries :: [Decl] -> State TranslatorState ()
@@ -178,7 +187,6 @@ generateFunctionImpl f@(FunctionImpl name argNames _) l@(Lam ep bnd) = do
               return $ "auto " ++ (head varStack) ++ " = "
 
   let cLambda = start ++ "[" ++ (captures $ delete stringVarName captureStack) ++ "](auto " ++ stringVarName ++ ") { "{--auto " ++ (head varStack) ++ " = " --}++ (innerLines bndInterDef) ++ "; return " ++ syntheticVariable  ++ ";}"
-
   return $ FunctionImpl name argNames [cLambda]
   where innerLines bndInterDef = case bndInterDef of
                                   (FunctionImpl _ _ lines) -> concat $ intersperse ";" lines
@@ -278,8 +286,9 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
                  -- Updateing state
                  put (interDefs, varNumber, tail varStack, captureStack)
                  return $ "auto " ++ syntheticVar ++ " = "
-      let mainType = getCTypeFromConstructorName interDefs conName
+
       (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+      let mainType = getCTypeFromConstructorName interDefs conName
       let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args)
       put (interDefs, varNumber + (length args),  (argSyntheticVars ++ varStack), captureStack) -- Putting the new vars on the stack
       interDefForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
@@ -485,6 +494,7 @@ generateCType (Ann t _) = undefined
 generateCType (App term arg) = undefined
 generateCType (Var name) = return $ Unbound.name2String name
 generateCType (Lam ep bnd) = undefined
+
 
 
 

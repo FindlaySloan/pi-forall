@@ -4,10 +4,19 @@ data Maybe (A : Type) : Type where
    Nothing
    Just of (A)
 
-f : Bool -> Maybe Char
+g : Bool -> Bool -> Bool
+g = \a b . case a of
+    True -> case b of
+                True -> True
+                False -> False
+    False -> False
+
+f : Maybe (Maybe Char) -> Char
 f = \b . case b of
-           True -> Nothing
-           False -> Just 'a'
+           Nothing  -> 'a'
+           Just n   -> case n of
+                           Nothing -> 'a'
+                           Just g -> g
 {--
 --id : Char -> Char -> Char
 --id = \a b.  a
