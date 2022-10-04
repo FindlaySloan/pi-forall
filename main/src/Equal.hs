@@ -271,8 +271,8 @@ unify ns tx ty = do
   if Unbound.aeq txnf tynf
     then return []
     else case (txnf, tynf) of
-      (Var y, yty) | y `notElem` ns -> return [Def y yty]
-      (yty, Var y) | y `notElem` ns -> return [Def y yty]
+      (Var y, yty) | y `notElem` ns -> return [Def y (yty, [])]
+      (yty, Var y) | y `notElem` ns -> return [Def y (yty, [])]
       (Prod a1 a2, Prod b1 b2) -> unifyArgs [Arg Rel a1, Arg Rel a2] [Arg Rel b1, Arg Rel b2]
       (TyEq a1 a2, TyEq b1 b2) -> unifyArgs [Arg Rel a1, Arg Rel a2] [Arg Rel b1, Arg Rel b2]
       (TCon s1 tms1, TCon s2 tms2)

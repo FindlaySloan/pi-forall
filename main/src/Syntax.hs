@@ -177,7 +177,7 @@ data Decl
     TypeSig Sig
   | -- | The definition of a particular name, must
     -- already have a type declaration in scope
-    Def TName Term
+    Def TName (Term, [Term])
   | -- | A potentially (recursive) definition of
     -- a particular name, must be declared
     RecDef TName Term 

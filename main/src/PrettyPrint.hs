@@ -86,6 +86,8 @@ instance Disp (Unbound.Name Term) where
 -------------------------------------------------------------------------
 
 instance Disp Term
+instance Disp (Type, [Type]) where
+  disp (t, ts) =  (PP.text "(") <+> (disp t) <+> (PP.text ", ") <+> (PP.vcat $ map disp ts) <+> (PP.text ")")
 
 {- SOLN EP -}
 instance Disp Arg
@@ -129,7 +131,7 @@ instance Disp Sig where
 
 instance Disp Decl where
   disp (Def n term)  = disp n <+> PP.text "=" <+> disp term
-  disp (RecDef n r)  = disp (Def n r)
+  disp (RecDef n r)  = disp n <+> PP.text "=" <+> disp r
   disp (TypeSig sig) = disp sig
 {- SOLN EP -}
   disp (Demote ep)   = mempty

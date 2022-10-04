@@ -36,19 +36,19 @@ template < class A > inline _Maybe < A > _Maybe < A > ::_Just(A _1) {
 };
 
 
-std:: function < char(_Maybe < char > ) > f = [](auto b) {
+std:: function < bool(_Maybe < char > ) > f = [](auto b) {
   auto _1 = [b]() {
     auto _2 = b;
     switch (_2.type) {
     case Nothing: {
-      auto _4 = * (_Maybe_Nothing<char> * ) _2.data;
-      auto _3 = 'a';
+      auto _4 = * (_Maybe_Nothing < char > * ) _2.data;
+      auto _3 = false;
       return _3;
     }
     case Just: {
-      auto _6 = * (_Maybe_Just<char> * ) _2.data;
+      auto _6 = * (_Maybe_Just < char > * ) _2.data;
       auto n = _6._1;
-      auto _5 = n;
+      auto _5 = true;
       return _5;
     }
     }
@@ -60,7 +60,7 @@ int main() {
 
 
 
-    std::cout << f(_Maybe<char>::_Just('b')) << std::endl;
+    std::cout << f(_Maybe<char>::_Nothing()) << std::endl;
 
     return 0;
 }

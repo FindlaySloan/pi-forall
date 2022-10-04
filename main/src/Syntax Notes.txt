@@ -145,3 +145,5 @@ Module {
             dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}
 
 -------
+TypeSig (Sig {sigName = f, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 14, column 5) (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar))}),
+Def f (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),[Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}],TyChar])]

@@ -351,7 +351,7 @@ telebindings = many teleBinding
         v <- variable
         reservedOp "="
         t <- expr
-        return (Def v t :)
+        return (Def v (t,[]) :)
     
     teleBinding :: LParser ([Decl] -> [Decl])
     teleBinding =
@@ -403,7 +403,7 @@ sigDef = do
 valDef = do
   n <- try (do {n <- variable; reservedOp "="; return n})
   val <- expr
-  return $ Def n val
+  return $ Def n (val, [])
 
 
 ------------------------

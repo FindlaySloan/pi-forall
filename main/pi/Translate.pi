@@ -3,20 +3,18 @@ module Translate where
 data Maybe (A : Type) : Type where
    Nothing
    Just of (A)
-
+{--
 g : Bool -> Bool -> Bool
 g = \a b . case a of
     True -> case b of
                 True -> True
                 False -> False
     False -> False
-
-f : Maybe (Maybe Char) -> Char
+--}
+f : Maybe Char -> Bool
 f = \b . case b of
-           Nothing  -> 'a'
-           Just n   -> case n of
-                           Nothing -> 'a'
-                           Just g -> g
+           Nothing  -> False
+           Just n   -> True
 {--
 --id : Char -> Char -> Char
 --id = \a b.  a

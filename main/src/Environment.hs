@@ -147,7 +147,7 @@ lookupDef ::
   m (Maybe Term)
 lookupDef v = do
   ctx <- asks ctx
-  return $ listToMaybe [a | Def v' a <- ctx, v == v']
+  return $ listToMaybe [fst a | Def v' a <- ctx, v == v']
 
 lookupRecDef ::
   (MonadReader Env m) =>
