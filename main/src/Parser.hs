@@ -620,7 +620,7 @@ ifExpr =
      reserved "else"
      c <- expr
 {- SOLN DATA -}
-     return (Case a [Match $ Unbound.bind (PatCon trueName []) b, 
+     return (Case a Type [Match $ Unbound.bind (PatCon trueName []) b,
                      Match $ Unbound.bind (PatCon falseName []) c])
 {- STUBWITH
      return (If a b c ) -}
@@ -651,7 +651,7 @@ letPairExp = do
     a <- expr
 {- SOLN DATA -}
     let pat = PatCon prodName [(PatVar x, Rel), (PatVar y, Rel)]
-    return $ Case scrut [Match (Unbound.bind pat a)]
+    return $ Case scrut Type [Match (Unbound.bind pat a)]
 {- STUBWITH     return $ LetPair scrut (Unbound.bind (x,y) a)  -}
 
 
@@ -761,7 +761,7 @@ caseExpr = do
     scrut <- expr
     reserved "of"
     alts <- layout match (return ())
-    return $ Case (Pos pos scrut) alts 
+    return $ Case (Pos pos scrut) Type alts
 {- STUBWITH -}    
     
 

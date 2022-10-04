@@ -232,7 +232,7 @@ tcTerm t@(DCon c args) (Just ty) = do
       Env.err [DS "Unexpected type", DD ty, DS "for data constructor", DD t]
 
 -- Must have an annotation for Case
-tcTerm t@(Case scrut alts) (Just ty) = do
+tcTerm t@(Case scrut scrutTy alts) (Just ty) = do
   sty <- inferType scrut
   scrut' <- Equal.whnf scrut
   (c, args) <- Equal.ensureTCon sty

@@ -101,7 +101,7 @@ genTerm n
               {- SOLN DATA -}
               (if b then 1 else 0, TCon <$> genTCName <*> genArgs n'),
               (if b then 1 else 0, DCon <$> genDCName <*> genArgs n'),
-              (1, Case <$> go True n' <*> genBoundedList 2 (genMatch n')),
+              (1, Case <$> go True n' <*> genTerm n' <*> genBoundedList 2 (genMatch n')),
               {- STUBWITH (1, If <$> genTerm n' <*> genTerm n' <*> genTerm n'),
               (1, genSigma n'),
               (1, Prod <$> genTerm n' <*> genTerm n'),
@@ -208,7 +208,7 @@ instance Arbitrary Term where
 {- SOLN DATA -}
     shrink (TCon n as) = map unArg as ++ [TCon n as' | as' <- QC.shrink as]
     shrink (DCon n as) = map unArg as ++ [DCon n as' | as' <- QC.shrink as]
-    shrink (Case a ms) = [a] ++ [Case a' ms | a' <- QC.shrink a] ++ [Case a ms' | ms' <- QC.shrink ms]
+    shrink (Case a t ms) = [a] ++ [Case a' t ms | a' <- QC.shrink a] ++ [Case a t ms' | ms' <- QC.shrink ms] -- TODO ASK CHRIS
     {- STUBWITH -}
     shrink _ = []
        

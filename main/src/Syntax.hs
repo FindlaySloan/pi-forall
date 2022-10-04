@@ -103,7 +103,7 @@ data Term
   | -- | term constructors (fully applied)
     DCon DCName [Arg] 
   | -- | case analysis  `case a of matches`
-    Case Term [Match]
+    Case Term Type [Match]
   {- STUBWITH -}
   deriving (Show, Generic)
 

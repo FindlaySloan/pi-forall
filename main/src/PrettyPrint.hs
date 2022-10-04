@@ -403,11 +403,12 @@ instance Display Term where
     dargs <- withPrec (levelApp+1) $ mapM display args
     return $ 
       parens (levelApp < p && length args > 0) (dn <+> PP.hsep dargs)
-  display (Case scrut alts) = do
+  display (Case scrut sTy alts) = do
     p <- asks prec
     dscrut <- withPrec 0 $ display scrut
+    dsty <- withPrec 0 $ display scrut
     dalts <- withPrec 0 $ mapM display alts
-    let top = PP.text "case" <+> dscrut <+> PP.text "of" 
+    let top = PP.text "case" <+> dscrut <+> PP.text "of"
     return $
       parens (levelCase < p) $
         if null dalts then top <+> PP.text "{ }" else top $$ PP.nest 2 (PP.vcat dalts)

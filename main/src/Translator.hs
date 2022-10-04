@@ -252,7 +252,7 @@ generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
   return $ FunctionImpl name argNames (( start ++ (show literal)) : lines)
 
 -- | Generates for a case statement
-generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
+generateFunctionImpl (FunctionImpl name argNames lines) (Case term tType matches) = do
   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
   let termSyntheticVar = getVarName $ varNumber + 1 -- Generating the variable for the scrutinised term
   start <- case varStack of

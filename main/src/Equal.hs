@@ -90,9 +90,10 @@ equate t1 t2 = do
       zipWithM_ equateArgs [ts1] [ts2]
     (DCon d1 a1, DCon d2 a2) | d1 == d2 -> do
       equateArgs a1 a2
-    (Case s1 brs1, Case s2 brs2) 
+    (Case s1 s1Ty brs1, Case s2 s2Ty brs2)
       | length brs1 == length brs2 -> do
       equate s1 s2
+      equate s1Ty s2Ty
       -- require branches to be in the same order
       -- on both expressions
       let matchBr (Match bnd1) (Match bnd2) = do
@@ -227,8 +228,9 @@ whnf (Subst tm pf) = do
     Refl -> whnf tm
     _ -> return (Subst tm pf'){- STUBWITH -}    
 {- SOLN DATA -}      
-whnf (Case scrut mtchs) = do
-  nf <- whnf scrut        
+whnf (Case scrut sTy mtchs) = do
+  nf <- whnf scrut
+  sNf <- whnf sTy
   case nf of 
     (DCon d args) -> f mtchs where
       f (Match bnd : alts) = (do
@@ -238,7 +240,7 @@ whnf (Case scrut mtchs) = do
             `catchError` \ _ -> f alts
       f [] = Env.err $ [DS "Internal error: couldn't find a matching",
                     DS "branch for", DD nf, DS "in"] ++ map DD mtchs
-    _ -> return (Case nf mtchs){- STUBWITH -}            
+    _ -> return (Case nf sNf mtchs){- STUBWITH -}
 -- all other terms are already in WHNF
 -- don't do anything special for them
 whnf tm = return tm
@@ -310,7 +312,7 @@ amb :: Term -> Bool
 amb (App t1 t2) = True
 amb (If _ _ _) = True
 amb (LetPair _ _) = True
-amb (Case _ _) = True
+amb (Case _ _ _) = True
 amb _ = False
 {- STUBWITH -}
 
