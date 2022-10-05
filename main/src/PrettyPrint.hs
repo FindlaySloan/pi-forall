@@ -130,7 +130,7 @@ instance Disp Sig where
   disp (Sig n {- SOLN EP -} ep {- STUBWITH -} ty) = disp n <+> PP.text ":" <+> disp ty
 
 instance Disp Decl where
-  disp (Def n term)  = disp n <+> PP.text "=" <+> disp term
+  disp (Def n (term, t))  = disp n <+> PP.text "=" <+> disp term
   disp (RecDef n r)  = disp n <+> PP.text "=" <+> disp r
   disp (TypeSig sig) = disp sig
 {- SOLN EP -}

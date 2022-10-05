@@ -219,18 +219,22 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) a@(App term arg) = do
 generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
 
   (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
+--  s <- case head typeStack of
+--            (Pi _ _ _) -> return "###PI###"
+--            (TCon _ _) -> return "###TCON###"
+--            _ -> return "###OTHER###"
   let stringVarName = Unbound.name2String varName -- Getting the name of the variable
   start <- case varStack of 
     [] -> do case isDefined interDefs stringVarName of
-              True  -> put (interDefs, varNumber, varStack, captureStack, typeStack)
-              False -> put (interDefs, varNumber, varStack, captureStack ++ [stringVarName], typeStack) -- Updateing the state so the variable stack and capture stack is updated
+              True  -> put (interDefs, varNumber, varStack, captureStack, tail typeStack)
+              False -> put (interDefs, varNumber, varStack, captureStack ++ [stringVarName],tail typeStack) -- Updateing the state so the variable stack and capture stack is updated
              return ""
           
     _  -> do let syntheticVar = head varStack
              -- Updateing state
              case isDefined interDefs stringVarName of
-              True  -> put (interDefs, varNumber, tail varStack, captureStack, typeStack)
-              False -> put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName], typeStack) -- Updateing the state so the variable stack and capture stack is updated
+              True  -> put (interDefs, varNumber, tail varStack, captureStack, tail typeStack)
+              False -> put (interDefs, varNumber, tail varStack, captureStack ++ [stringVarName],tail typeStack) -- Updateing the state so the variable stack and capture stack is updated
              return $ "auto " ++ syntheticVar ++ " = "
 
   -- Updateing state
@@ -245,6 +249,8 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
 
 -- | Generates a char literal
 generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
+  (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
+  put (interDefs, varNumber, varStack, captureStack, tail typeStack)
   (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
   start <- case varStack of 
     [] -> do return ""
@@ -261,11 +267,11 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
 --  let termType = TyChar
   let termSyntheticVar = getVarName $ varNumber + 1 -- Generating the variable for the scrutinised term
   start <- case varStack of
-          [] -> do put (interDefs, varNumber + 1, termSyntheticVar : varStack, captureStack, tail $ tail typeStack) -- Updating the stack with term var
+          [] -> do put (interDefs, varNumber + 1, termSyntheticVar : varStack, captureStack, typeStack) -- Updating the stack with term var
                    return ""
           _  -> do let syntheticVar = head varStack
                    -- Updateing state
-                   put (interDefs, varNumber + 1, termSyntheticVar : (tail varStack), captureStack, tail $ tail typeStack) -- Updating the stack with term var
+                   put (interDefs, varNumber + 1, termSyntheticVar : (tail varStack), captureStack,  typeStack) -- Updating the stack with term var
                    return $ "auto " ++ syntheticVar ++ " = "
   termInterDef <- generateFunctionImpl (FunctionImpl name argNames []) term -- Generating the interDef for the term
   (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
@@ -293,13 +299,25 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
                  return $ "auto " ++ syntheticVar ++ " = "
 
       (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+      let actualType = head typeStack
       let mainType = getCTypeFromConstructorName interDefs conName
+--      tempInfo <- case head typeStack of
+--        (Pi _ _ _) -> return $ "###pi###"
+--        (TCon _ _) -> return $ "###tcon###"
+--        (TyChar) -> return $ "###char###"
+--        _ -> return $ "####other#####"
+      tempInfo <- templateInfo $ actualType
+
       let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args)
-      put (interDefs, varNumber + (length args),  (argSyntheticVars ++ varStack), captureStack, typeStack) -- Putting the new vars on the stack
-      interDefForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
-      return $ FunctionImpl name argNames ((concat $ map cLines interDefForArgs) ++ ( (start ++ "_" ++ mainType ++ "::_"++ conName ++ "(" ++ ")") : lines))
+      put (interDefs, varNumber + (length args),  (argSyntheticVars ++ varStack), captureStack, tail typeStack) -- Putting the new vars on the stack
+      interDefForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (map (unArg) args)
+      return $ FunctionImpl name argNames ((concat $ map cLines interDefForArgs) ++ ( (start ++ "_" ++ mainType ++ tempInfo ++ "::_"++ conName ++ "(" ++ (concat $ intersperse "," (argSyntheticVars)) ++ ")") : lines))
 
       where
+        templateInfo (TCon name []) = return $ ""
+        templateInfo (TCon name args) = do
+          s <- mapM (generateCType) $ map (\(Arg Rel t) -> t) args
+          return $ "<" ++ (concat $ intersperse ", " s)   ++ ">"
 --        (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
 --          --let syntheticVar = head varStack -- Popping the variable from the stack
 --
@@ -409,7 +427,7 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
   --let syntheticVar = head varStack -- Popping the variable from the stack
 
   let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
-  put (interDefs, varNumber + (length args),  ( varStack), captureStack, typeStack) -- Putting the new vars on the stack
+  put (interDefs, varNumber + (length args),  ( varStack), captureStack, tail typeStack) -- Putting the new vars on the stack
   interDefForTerm <- generateFunctionImpl (FunctionImpl name argNames []) t -- Generating interDef for the term
   let newLines = ({--"auto " ++ syntheticVar ++ " = " ++ " " ++ --}(concat functionCall)) : lines
       functionCall = (cLines interDefForTerm) ++ [argsAsString]
@@ -468,7 +486,7 @@ generateData (Data tcName telescope constructorDefs) = do
         genConAttributes (decl:decls) number acc = let var = getVarName (number + 1)
                                                    in case decl of
                                                         (TypeSig (Sig _ _ sigType)) -> do t <- generateCType sigType
-                                                                                          return $ [t ++ " " ++ var] ++ acc
+                                                                                          genConAttributes decls (number + 1) $ acc ++ [t ++ " " ++ var]
                                                         _             -> undefined -- TODO UPDATE
         genConstructor tcName c@(ConstructorDef _ conName args) = do
             attributes <- conClassAttributes c
@@ -498,10 +516,10 @@ generateCType (TCon name args) =
       templateInfo [] = return ""
       templateInfo args = do
         templates <- mapM (generateCType) $ map (\(Arg ep t) -> t) args
-        return $ "< " ++ ( concat $ intersperse ", " templates )++ " >"
+        return $ "<" ++ ( concat $ intersperse "," templates )++ ">"
 
 generateCType (Ann t _) = undefined
-generateCType (App term arg) = undefined
+generateCType (App term arg) = generateCType term
 generateCType (Var name) = return $ Unbound.name2String name
 generateCType (Lam ep bnd) = undefined
 

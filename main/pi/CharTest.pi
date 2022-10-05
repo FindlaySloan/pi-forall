@@ -7,10 +7,10 @@ e : List Char
 e = "asdfdasfe"
 
 r : List List Char
-r = [['a']]
+r = <<'a'>>
 
 g : List List List Char
-g = [[['a'], ['a']]]
+g = <<<'a'>, <'a'>>>
 
 h : List (Char -> Char)
-h = [charId]
+h = <charId>

@@ -1,21 +1,30 @@
 module Translate where
 
+head : List Char -> Char
+head = \a . case a of
+                Nil       -> '1'
+                Cons x xs -> x
+
+main : Char
+main = head <'a', 'b'>
+
+a : Char -> List Char
+a = \a . "abc"
+
 data Maybe (A : Type) : Type where
    Nothing
    Just of (A)
-{--
-g : Bool -> Bool -> Bool
-g = \a b . case a of
-    True -> case b of
-                True -> True
-                False -> False
-    False -> False
---}
-f : Maybe Char -> Bool
+
+
+
+f : Maybe (Maybe Char) -> Bool
 f = \b . case b of
            Nothing  -> False
            Just n   -> True
-{--
+
+g : Char -> Bool
+g = \b . f (Nothing)
+
 --id : Char -> Char -> Char
 --id = \a b.  a
 
@@ -32,7 +41,4 @@ pred : Nati -> Char
 pred = \n . case n of
   Zeroi -> show Zeroi
   Succi nn -> show nn
---}
 
--- doSomething : Nat -> Nat -> Nat
--- doSomething = \a b . 7

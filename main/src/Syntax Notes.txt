@@ -145,5 +145,42 @@ Module {
             dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}
 
 -------
+
+Def main (App (Var head)
+              (Arg {argEp = Rel, unArg =
+              DCon "Cons" [
+                Arg {argEp = Rel, unArg = (LitChar 'a')},
+                Arg {argEp = Rel, unArg =
+                    DCon "Cons" [
+                        Arg {argEp = Rel, unArg =  (LitChar 'b')},
+                        Arg {argEp = Rel, unArg = DCon "Nil" []}]}]})),
+
+
+[
+TyChar,
+(Pi Rel (TCon "List" [Arg {argEp = Rel, unArg = TyChar}]) (<_> TyChar)),
+TCon "List" [Arg {argEp = Rel, unArg = TyChar}],
+TyChar,
+TCon "List" [Arg {argEp = Rel, unArg = TyChar}],
+TyChar,
+TCon "List" [Arg {argEp = Rel, unArg = TyChar}]
+]
+
+Def pred ((Lam Rel (<n> (Case (((Var 0@0))) [
+    Match (<(PatCon "Zeroi" [])> ((App (Var show) (Arg {argEp = Rel, unArg = DCon "Zeroi" []})))),
+    Match (<(PatCon "Succi" [(PatVar nn,Rel)])> ((App (Var show) (Arg {argEp = Rel, unArg = Var 0@0}))))]))),
+
+[Pi Rel (TCon "Nati" []) (<_2> TyChar), Lam
+TCon "Nati" [], Case
+TyChar, Case
+TyChar, App
+(Pi Rel (TCon "Nati" []) (<_1> TyChar)),
+TCon "Nati" [],
+TyChar,
+(Pi Rel (TCon "Nati" []) (<_1> TyChar)),
+TCon "Nati" []])]
+
+Def main (Pos "pi/Translate.pi" (line 9, column 8) (App (Var head) (Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = Pos "pi/Translate.pi" (line 9, column 14) (LitChar 'a')},Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = Pos "pi/Translate.pi" (line 9, column 19) (LitChar 'b')},Arg {argEp = Rel, unArg = DCon "Nil" []}]}]})),[TyChar]),TypeSig (Sig {sigName = a, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 11, column 5) (Pi Rel TyChar (<_1> TCon "List" [Arg {argEp = Rel, unArg = TyChar}]))})
+(DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'b'},Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'c'},Arg {argEp = Rel, unArg = DCon "Nil" []}]}]}]))),[Pi Rel TyChar (<_1> TCon "List" [Arg {argEp = Rel, unArg = TyChar}]),TCon "List" [Arg {argEp = Rel, unArg = TyChar}]])]
 TypeSig (Sig {sigName = f, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 14, column 5) (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar))}),
 Def f (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),[Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}],TyChar])]

@@ -7,7 +7,7 @@ emptyStringNil : List Char
 emptyStringNil = Nil
 
 emptyStringSugar : List Char
-emptyStringSugar = []
+emptyStringSugar = <>
 
 singleStringLit : List Char
 singleStringLit = "a"
@@ -16,7 +16,7 @@ singleStringCons : List Char
 singleStringCons = Cons 'a' Nil
 
 singleStringSugar : List Char
-singleStringSugar = ['a']
+singleStringSugar = <'a'>
 
 stringInString : List List Char
-stringInString = [""]
+stringInString = <"">

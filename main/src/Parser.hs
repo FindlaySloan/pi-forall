@@ -592,10 +592,10 @@ listType =
 
 listLiteral :: LParser Term
 listLiteral =
-  do _ <- Token.symbol tokenizer "["
+  do _ <- Token.symbol tokenizer "<"
      x <-  (sepBy (expr) (comma)) -- Reading the comma seperated list of expressions
 --     x <- between (reservedOp "[") (reservedOp "]") (Token.commaSep (expr) )
-     _ <- Token.symbol tokenizer "]"
+     _ <- Token.symbol tokenizer ">"
      return $ encode x
       where
         encode :: [Term] -> Term

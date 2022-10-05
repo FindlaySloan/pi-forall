@@ -100,9 +100,10 @@ tcTerm (App t1 t2) Nothing = do
     [DS "In application, expected", DD ep1, DS "argument but found", 
                                     DD t2, DS "instead." ]
   -- if the argument is Irrelevant, resurrect the context
-  (if ep1 == Irr then Env.extendCtx (Demote Rel) else id) $ 
-    checkType (unArg t2) tyA
-  return (Unbound.instantiate bnd [unArg t2], [Unbound.instantiate bnd [unArg t2]])
+  x <-(if ep1 == Irr then Env.extendCtx (Demote Rel) else id) $
+    checkTypeRet (unArg t2) tyA
+  liftIO $ putStrLn $ show $ x
+  return (Unbound.instantiate bnd [unArg t2], [Unbound.instantiate bnd [unArg t2]] ++ (snd ty1) ++ (snd x))
   {- STUBWITH 
 
   (tyA,bnd) <- ensurePi ty1
@@ -233,8 +234,10 @@ tcTerm t@(DCon c args) (Just ty) = do
             DS "arguments."
           ]
       newTele <- substTele delta params deltai
-      tcArgTele args newTele
-      return (ty, [ty])
+      argTys <- tcArgTeleRet args newTele []
+--      argTys <- mapM (inferType) (map (\(Arg e t) -> t) args)
+--      liftIO $ putStrLn $ show (map (\(Arg e t) -> t) args)
+      return (ty, [ty] ++ argTys )
     _ ->
       Env.err [DS "Unexpected type", DD ty, DS "for data constructor", DD t]
 
@@ -251,14 +254,25 @@ tcTerm t@(Case scrut alts) (Just ty) = do
         -- add defs to the contents from scrut = pat
         -- could fail if branch is in-accessible
         decls' <- Equal.unify [] scrut' (pat2Term pat)
-        Env.extendCtxs (decls ++ decls') $ checkType body ty
+        y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
+        return y
         {- STUBWITH -}
 {- SOLN DATA -}
         return ()
   let pats = map (\(Match bnd) -> fst (unsafeUnbind bnd)) alts
-  mapM_ checkAlt alts
+  x <- mapM (\(Match bnd) -> do
+                               (pat, body) <- Unbound.unbind bnd
+                               -- add variables from pattern to context
+                               -- could fail if branch is in-accessible
+                               decls <- declarePat pat Rel (TCon c args)
+                               -- add defs to the contents from scrut = pat
+                               -- could fail if branch is in-accessible
+                               decls' <- Equal.unify [] scrut' (pat2Term pat)
+                               y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
+                               return y) alts
+
   exhaustivityCheck scrut' (fst sty) pats
-  return (ty, [(fst sty), ty])
+  return (ty, [(fst sty)] ++  (concat $ map (snd) x))
 {- STUBWITH -}
 {- SOLN EQUAL -}
 tcTerm (TyEq a b) Nothing = do
@@ -403,6 +417,30 @@ tcArgTele [] _ =
 tcArgTele _ [] =
   Env.err [DD "Too many arguments provided."]
 tcArgTele _  tele = 
+  Env.err [DS "Invalid telescope", DD tele]
+
+tcArgTeleRet :: [Arg] -> [Decl] -> [Type] -> TcMonad [Type]
+tcArgTeleRet [] [] t = return t
+tcArgTeleRet args (Def x ty : tele) t = do
+  tele' <- doSubst [(x,(fst ty))] tele
+  tcArgTeleRet args tele' t
+tcArgTeleRet (Arg ep1 tm : terms) (TypeSig (Sig x ep2 ty) : tele) t
+  | ep1 == ep2 = do
+      checkedTy <- Env.withStage ep1 $ checkTypeRet tm ty
+      tele' <- doSubst [(x, tm)] tele
+      tcArgTeleRet terms tele' (t++(snd checkedTy))
+  | otherwise =
+  Env.err
+    [ DD ep1,
+      DS "argument provided when",
+      DD ep2,
+      DS "argument was expected"
+    ]
+tcArgTeleRet [] _ _ =
+  Env.err [DD "Too few arguments provided."]
+tcArgTeleRet _ [] _ =
+  Env.err [DD "Too many arguments provided."]
+tcArgTeleRet _  tele _ =
   Env.err [DS "Invalid telescope", DD tele]
 
 -- | Substitute a list of terms for the variables bound in a telescope
