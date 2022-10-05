@@ -102,7 +102,7 @@ translateModuleEntry (TypeSig sig) =
 translateModuleEntry (Def name (term, ts)) = do
   (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
   put (interDefs, varNumber, varStack, captureStack, ts) -- Putting the new type stack onto the state
-  generateFunctionImpl (FunctionImpl (Unbound.name2String $ name) [] []) (term) --TODO CHANGE
+  initialGenerateFunctionImpl (FunctionImpl (Unbound.name2String $ name) [] []) (term) --TODO CHANGE
 translateModuleEntry (RecDef name term) = undefined
 translateModuleEntry (Demote epsilon) = undefined
 translateModuleEntry d@(Data tcName telescope constructorDefs) =
@@ -131,37 +131,29 @@ generateFunctionDef (FunctionDef name args _ definition) t@(TCon tName tArgs) = 
   cType <- generateCType t -- Generating the C Type for the TCon
   return $ FunctionDef name args cType cType-- TODO refactor
 
--- | This function will be used to generate requreid C information for the implementation of the function. It will
--- | only construct FunctionImpl and no other InterDef's
--- initialGenerateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
--- initialGenerateFunctionImpl funcImpl t = generateFunctionImpl funcImpl t
+-- | This function will be used to check if there is an inital lambda, if not then it will make an anaomyse C function
+-- | as there is no intital lambda
+initialGenerateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
 -- | Matches with a Pos term and removes and recalls the function
--- initialGenerateFunctionImpl funcImpl (Pos _ t) =
---   initialGenerateFunctionImpl funcImpl t
--- -- | Matches ot a lambda, at this level it means we have some arguments. This will call the function that will
--- -- | keep matching Lambdas to get all the arguments then parse the final term
--- initialGenerateFunctionImpl funcImpl term@(Lam ep bnd) =
---   generateFunctionImplFromLambdas funcImpl term
--- | Otherwise no specific argments given to the function, and parses the term
-
--- | This function will be called when an initial function implementation is generated and a lambda is found.
--- | It will extract all of the arg names before going back to general parse
--- generateFunctionImplFromLambdas :: InterDef -> Term -> State TranslatorState InterDef
--- -- | Matches with a Pos term and removes and recalls the function
--- generateFunctionImplFromLambdas funcImpl (Pos _ t) =
---   generateFunctionImplFromLambdas funcImpl t
--- -- | Matches with lambda and adds to the list of args and recursivly checks for more lambdas
--- generateFunctionImplFromLambdas (FunctionImpl name argNames lines) (Lam ep bnd) =
---   generateFunctionImplFromLambdas (FunctionImpl name (argNames ++ [xName]) lines) term
---       where (xBnd, term) = unsafeUnbind bnd
---             xName = Unbound.name2String xBnd
--- -- | Reached end of lambdas that contain the arguments, need to have a return statement and then generate the
--- -- | rest of the implmentation
--- generateFunctionImplFromLambdas f@(FunctionImpl name argNames lines) t = do
---   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
---   put (interDefs, varNumber + 1, ((getVarName $ varNumber + 1) : varStack), captureStack)
---   let newLines = ("return " ++ (getVarName $ varNumber + 1)) : lines
---   generateFunctionImpl (FunctionImpl name argNames newLines) t
+initialGenerateFunctionImpl funcImpl (Pos _ t) =
+ initialGenerateFunctionImpl funcImpl t
+initialGenerateFunctionImpl funcImpl (Ann t _) =
+ initialGenerateFunctionImpl funcImpl t
+-- | Matches ot a lambda, at this level it means we have some arguments. This will call the function that will
+-- | keep matching Lambdas to get all the arguments then parse the final term
+initialGenerateFunctionImpl funcImpl term@(Lam ep bnd) =
+ generateFunctionImpl funcImpl term
+-- | Otherwise no lamda, so need to create an anonomyse function
+initialGenerateFunctionImpl funcImpl t = do
+  (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
+  let syntheticVariable = (getVarName $ varNumber + 1) -- The synthetic variable for the return
+  put (interDefs, varNumber + 1, syntheticVariable : varStack, captureStack, typeStack) -- Putting the syntheticVariable onto the stack
+  tInterDef <- generateFunctionImpl funcImpl t -- Generating the inter def for the term
+  (interDefs, varNumber, varStack, captureStack, typeStack) <- get -- Getting the state
+  let lines = "[" ++ (captures $ captureStack) ++ "]" ++ "() {" ++ (concat $ intersperse ";" $ cLines tInterDef) ++ "; return " ++ syntheticVariable ++ ";}()"
+  return $ (FunctionImpl (functionName tInterDef) (argNames tInterDef) [lines] )
+  where
+    captures stack = concat $ intersperse "," stack
 
 -- | This function will generate the C code for a function implementation, but it will be called after checking
 -- | for the inital lambda (which gives the functions args).

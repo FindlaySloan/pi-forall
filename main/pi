@@ -1,0 +1,69 @@
+#!/bin/bash
+# Adapted from : https://stackoverflow.com/questions/192249/how-do-i-parse-command-line-arguments-in-bash
+POSITIONAL_ARGS=()
+
+OUTPUT="a.out"
+COUT="out/out.cpp"
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -o|--output)
+      OUTPUT="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -c|--cout)
+      COUT="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+# Checking for input
+if [[ ${#POSITIONAL_ARGS[@]} -eq 0 ]]; then
+    echo "An input pi-forall file must be provided"
+    exit 1
+fi
+
+if [[ ${#POSITIONAL_ARGS[@]} -ne 1 ]]; then
+    echo "There should only be a single argument for the path to the pi-forall file"
+    exit 1
+fi
+
+INPUT=${POSITIONAL_ARGS[0]}
+
+# Checking if the input is a .pi file
+if [[ ${INPUT##*.} != "pi" ]]; then
+    echo "The input file must be a pi-forall file (with extension .pi)"
+    exit 1
+fi
+
+echo "Running the build"
+stack build
+
+echo "Executing the pi-forall translator"
+stack exec -- pi-forall $INPUT
+
+echo "Formatting the cpp file"
+clang-format -style=Google -i $COUT
+
+
+echo "Executing the g++ compiler"
+g++ --std=c++17 -o=$OUTPUT $COUT
+
+
+
+echo "COUT PATH    = ${COUT}"
+echo "OUTPUT PATH  = ${OUTPUT}"
+

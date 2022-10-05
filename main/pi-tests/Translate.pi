@@ -5,8 +5,8 @@ head = \a . case a of
                 Nil       -> '1'
                 Cons x xs -> x
 
-main : Char
-main = head <'a', 'b'>
+m : Char
+m = head <'a', 'b'>
 
 a : Char -> List Char
 a = \a . "abc"

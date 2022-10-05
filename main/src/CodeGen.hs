@@ -40,14 +40,8 @@ generateInterDefForFunctionDef f@(FunctionDef funcName args returnType def) =
 generateInterDefForFunctionImpl :: InterDef -> State GeneratorState String
 generateInterDefForFunctionImpl (FunctionImpl funcName args lines) = do
   interDefs <- get
-  return $ (funcDefString interDefs funcName) ++ funcName ++ " = " ++ (lambdas args [] "") ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};"  )
+  return $ (funcDefString interDefs funcName) ++ " " ++ funcName ++ " = " ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};"  )
    where
-     lambdas :: [String] -> [String] -> String -> String
-     lambdas [] _ acc = acc
-     lambdas (arg:args) argsSeen acc =
-       case argsSeen of
-         [] -> lambdas (args) (argsSeen ++ [arg]) $ acc ++ "[" ++ (captures argsSeen) ++ "] (" ++ "auto " ++ arg ++ ")" ++ "{"
-         _  -> lambdas (args) (argsSeen ++ [arg]) $ acc ++ "return [" ++ (captures argsSeen) ++ "] (" ++ "auto " ++ arg ++ ")" ++ "{"
 
      captures :: [String] -> String
      captures args = concat $ intersperse "," args
