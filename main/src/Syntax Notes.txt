@@ -184,3 +184,49 @@ Def main (Pos "pi/Translate.pi" (line 9, column 8) (App (Var head) (Arg {argEp =
 (DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'b'},Arg {argEp = Rel, unArg = DCon "Cons" [Arg {argEp = Rel, unArg = LitChar 'c'},Arg {argEp = Rel, unArg = DCon "Nil" []}]}]}]))),[Pi Rel TyChar (<_1> TCon "List" [Arg {argEp = Rel, unArg = TyChar}]),TCon "List" [Arg {argEp = Rel, unArg = TyChar}]])]
 TypeSig (Sig {sigName = f, sigEp = Rel, sigType = Pos "pi/Translate.pi" (line 14, column 5) (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar))}),
 Def f (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),[Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}]) (<_3> TyChar),TCon "Maybe" [Arg {argEp = Rel, unArg = TyChar}],TyChar])]
+
+
+[Module {moduleName = "Translate", moduleImports = [], moduleEntries = [
+TypeSig (Sig {sigName = map, sigEp = Rel, sigType = (Pi Rel ((Pi Rel TyChar (<_> TyChar))) (<_1> Pi Rel (TCon "List" [Arg {argEp = Rel, unArg = TyChar}]) (<_2> TCon "List" [Arg {argEp = Rel, unArg = TyChar}])))}),
+RecDef map ((Lam Rel (<f> Lam Rel (<xs> (Case (((Var 0@0))) [
+    Match (<(PatCon "Nil" [])>
+        (DCon "Nil" []))),
+    Match (<(PatCon "Cons" [(PatVar y,Rel),(PatVar ys,Rel)])>
+        ((DCon "Cons" [Arg {argEp = Rel, unArg =  (App (Var 2@0) (Arg {argEp = Rel, unArg = Var 0@0}))},Arg {argEp = Rel, unArg = (App (App (Var map) (Arg {argEp = Rel, unArg = Var 2@0})) (Arg {argEp = Rel, unArg = Var 0@1}))}])))])))),
+
+[]
+
+[Module {moduleName = "Translate", moduleImports = [], moduleEntries = [
+Data "Vec" (Telescope [TypeSig (Sig {sigName = A, sigEp = Rel, sigType = Type}), TypeSig (Sig {sigName = n, sigEp = Rel, sigType = (TCon "Nat" [])})])
+    [ConstructorDef "Nil" (Telescope [Def n ((DCon "Zero" []),[])]),
+     ConstructorDef "Cons" (Telescope [TypeSig (Sig {sigName = m, sigEp = Irr, sigType = (TCon "Nat" [])}),
+                                       TypeSig (Sig {sigName = _, sigEp = Rel, sigType = (Var A)}),
+                                       TypeSig (Sig {sigName = _1, sigEp = Rel, sigType = (TCon "Vec" [Arg {argEp = Rel, unArg = Var A},Arg {argEp = Rel, unArg = Var m}])}),
+                                       Def n (DCon "Succ" [Arg {argEp = Rel, unArg = Var m}]),[])])]],
+
+
+Data "Vec" (Telescope [TypeSig (Sig {sigName = A, sigEp = Rel, sigType = Type}),TypeSig (Sig {sigName = n, sigEp = Rel, sigType = (TCon "Nat" [])})])
+    [ConstructorDef "Nil1" (Telescope []),
+     ConstructorDef "Cons1" (Telescope [TypeSig (Sig {sigName = m, sigEp = Rel, sigType = (TCon "Nat" [])}),
+                                        TypeSig (Sig {sigName = _, sigEp = Rel, sigType = (Var A)}),
+                                        TypeSig (Sig {sigName = _1, sigEp = Rel, sigType = (TCon "Vec" [Arg {argEp = Rel, unArg = Var A},Arg {argEp = Rel, unArg = Var m}])})])]],
+
+Data "List" (Telescope [TypeSig (Sig {sigName = c, sigEp = Rel, sigType = Type})]) [
+    ConstructorDef "Nil" (Telescope []),
+    ConstructorDef "Cons" (Telescope [TypeSig (Sig {sigName = d, sigEp = Rel, sigType = Var c}),
+                                      TypeSig (Sig {sigName = e, sigEp = Rel, sigType = TCon "List" [Arg {argEp = Rel, unArg = Var c}]})])]
+
+
+
+TypeSig (Sig {sigName = head, sigEp = Rel, sigType =
+(Pi Irr (Type) (<A> (Pi Irr ((TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var 2@0))))))}),
+
+Def head ((Lam Irr (<A> Lam Irr (<n> Lam Rel (<x> (Case (((Var 0@0))) [
+    Match (<(PatCon "Cons1" [(PatVar m,Irr),(PatVar y,Rel),(PatVar ys,Rel)])> ((Var 0@1)))]))))),
+
+[
+Pi Irr (<A> (Pi Irr ((TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var 2@0))))),
+Pi Irr ( (TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var A9))),
+Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}]) (<_2> Var A9),
+TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}],
+Var A9])],

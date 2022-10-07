@@ -155,7 +155,7 @@ lookupRecDef ::
   m (Maybe Term)
 lookupRecDef v = do
   ctx <- asks ctx
-  return $ listToMaybe [a | RecDef v' a <- ctx, v == v']
+  return $ listToMaybe [fst a | RecDef v' a <- ctx, v == v']
 
 {- SOLN DATA -}
 

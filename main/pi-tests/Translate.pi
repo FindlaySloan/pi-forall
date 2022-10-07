@@ -1,44 +1,13 @@
 module Translate where
 
-head : List Char -> Char
-head = \a . case a of
-                Nil       -> '1'
-                Cons x xs -> x
+data Vec (A : Type) (n : Nat) : Type where
+  Nil1  of                       [n = Zero]
+  Cons1 of [m:Nat] (A) (Vec A m) [n = Succ m]
+
+head : [A :Type] -> [n:Nat] -> Vec A (Succ n) -> A
+head = \ [A][n] x.  case x of
+     Cons1 [m] y ys -> y
+	  -- Nil case is impossible
 
 m : Char
-m = head <'a', 'b'>
-
-a : Char -> List Char
-a = \a . "abc"
-
-data Maybe (A : Type) : Type where
-   Nothing
-   Just of (A)
-
-
-
-f : Maybe (Maybe Char) -> Bool
-f = \b . case b of
-           Nothing  -> False
-           Just n   -> True
-
-g : Char -> Bool
-g = \b . f (Nothing)
-
---id : Char -> Char -> Char
---id = \a b.  a
-
-data Nati : Type where
-  Zeroi
-  Succi of (Nati)
-
-show : Nati -> Char
-show = \s . case s of
-    Zeroi -> '0'
-    Succi n -> '1'
-
-pred : Nati -> Char
-pred = \n . case n of
-  Zeroi -> show Zeroi
-  Succi nn -> show nn
-
+m = head [Char] [0] (Cons1 [0] 'a' Nil1)

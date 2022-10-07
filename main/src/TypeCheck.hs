@@ -102,7 +102,7 @@ tcTerm (App t1 t2) Nothing = do
   -- if the argument is Irrelevant, resurrect the context
   x <-(if ep1 == Irr then Env.extendCtx (Demote Rel) else id) $
     checkTypeRet (unArg t2) tyA
-  liftIO $ putStrLn $ show $ x
+--  liftIO $ putStrLn $ show $ x
   return (Unbound.instantiate bnd [unArg t2], [Unbound.instantiate bnd [unArg t2]] ++ (snd ty1) ++ (snd x))
   {- STUBWITH 
 
@@ -609,7 +609,10 @@ tcEntry (Def n term) = do
            in do
                 Env.extendCtx (TypeSig sig) $ checkType (fst term) (sigType sig) `catchError` handler
                 if n `elem` Unbound.toListOf Unbound.fv term
-                  then return $ AddCtx [TypeSig sig, RecDef n (fst term)] -- TODO CHANGE
+                  then do
+                    ty <- Env.extendCtx (TypeSig sig) $ checkTypeRet (fst term) (sigType sig) -- Getting types of term, but as recursive have to extend context with the function type
+                    liftIO $ putStrLn $ show (snd ty)
+                    return $ AddCtx [TypeSig sig, RecDef n ((fst term), (snd ty))] -- TODO CHANGE
                   else do
                     ty <- checkTypeRet (fst term) (sigType sig)
                     return $ AddCtx [TypeSig sig, Def n ((fst term), (snd ty))]

@@ -1,0 +1,18 @@
+module Parallel where
+
+data Channel [id : List Char] (A : Type) : Type where
+    Chan [id] (A)
+
+data Process (A : Type) (B : Type) : Type where
+
+
+send :: [A : Type] -> [B : Type] -> [C : Type] -> Channel [id] A -> A -> (B -> C)
+send = TRUSTME
+
+receive :: [A : Type] -> [B : Type] -> Channel [id] A -> (A -> C)
+receive = TRUSTME
+
+
+
+test ::
+test = send (Chan ["a"] 1)

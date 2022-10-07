@@ -180,7 +180,7 @@ data Decl
     Def TName (Term, [Term])
   | -- | A potentially (recursive) definition of
     -- a particular name, must be declared
-    RecDef TName Term 
+    RecDef TName (Term, [Term])
 {- SOLN EP -}
     -- | Adjust the context for relevance checking
   | Demote Epsilon {- STUBWITH -} 

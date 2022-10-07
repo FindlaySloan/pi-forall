@@ -66,17 +66,18 @@ goFilename pathToMainFile = do
   putStrLn "type checking..."
   d <- runTcMonad emptyEnv (tcModules val)
   defs <- d `exitWith` putTypeError
-  putStrLn $ "-----------CTX AST---------------"
-  putStrLn $ show $ ctx emptyEnv
-  putStrLn $ "-----------CTX INTERDEF---------------"
-  let cInterDefs = translate (Module "" [] (ctx emptyEnv) emptyConstructorNames) []-- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
-  putStrLn $ show cInterDefs
-  putStrLn $ "-----------CTX CODE---------------"
-  putStrLn $ concat $ generateCCode cInterDefs
+--  putStrLn $ "-----------CTX AST---------------"
+  let initAST = ctx emptyEnv
+--  putStrLn $ show $ ctx emptyEnv
+--  putStrLn $ "-----------CTX INTERDEF---------------"
+--  let cInterDefs = translate (Module "" [] (ctx emptyEnv) emptyConstructorNames) []-- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
+--  putStrLn $ show cInterDefs
+--  putStrLn $ "-----------CTX CODE---------------"
+--  putStrLn $ concat $ generateCCode cInterDefs
   putStrLn $ "-----------AST---------------"
   putStrLn $ show (defs)
   putStrLn $ "-----------INTERDEF-------------"
-  let interDefs = translate (last defs) cInterDefs -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
+  let interDefs = translate (Module "" [] ((initAST) ++ (moduleEntries (last defs))) (moduleConstructors (last defs))) [] -- TODO CHAGNE FROM LAST AS ONLY CHECKING LAST MODULE, not imports
   putStrLn $ show interDefs
   putStrLn $ "-----------INTERDEF CODE-------------"
   let cCode = concat $ generateCCode interDefs
