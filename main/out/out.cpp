@@ -125,8 +125,8 @@ std::function<A(_Vec<A>)> head = [](auto x) {
     switch (_2.type) {
       case Cons1: {
         auto _4 = *(_Vec_Cons1<A>*)_2.data;
-        auto y = _4._2;
-        auto ys = _4._3;
+        auto y = _4._1;
+        auto ys = _4._2;
         auto _3 = y;
         return _3;
       }
@@ -134,5 +134,13 @@ std::function<A(_Vec<A>)> head = [](auto x) {
   }();
   return _1;
 };
+extern char m;
+char m = []() {
+  auto _9 = 'a';
+  auto _10 = _Vec<char>::_Nil1();
+  auto _6 = _Vec<char>::_Cons1(_9, _10);
+  auto _5 = head<char>(_6);
+  return _5;
+}();
 
 int main() {}

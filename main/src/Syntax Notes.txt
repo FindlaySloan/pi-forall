@@ -230,3 +230,32 @@ Pi Irr ( (TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Va
 Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}]) (<_2> Var A9),
 TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}],
 Var A9])],
+
+
+Def m ((App
+            (App
+                (App
+                (Var head)
+                (Arg {argEp = Irr, unArg = TyChar}))
+            (Arg {argEp = Irr, unArg = DCon "Zero" [])}))
+      (Arg {argEp = Rel, unArg = (DCon "Cons1" [Arg {argEp = Irr, unArg = (DCon "Zero" [])},Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Nil1" []}])})),
+
+[TyChar, 1
+(Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = TyChar}, Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = (DCon "Zero" [])}])}]) (<_2> TyChar)), 2
+(Pi Irr ((TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = TyChar},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> TyChar)))), 3
+(Pi Irr (Type) (<A>  (Pi Irr ((TCon "Nat" [])) (<n> (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var 2@0)))))), t3
+Type, a3
+TCon "Nat" [], a2
+TCon "Vec" [Arg {argEp = Rel, unArg = TyChar},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = (DCon "Zero" [])}])}], a1
+TCon "Nat" [],
+TyChar,
+TCon "Vec" [Arg {argEp = Rel, unArg = TyChar},Arg {argEp = Rel, unArg = (DCon "Zero" [])}]])]
+
+[Arg {argEp = Rel, unArg = (DCon "Cons1" [Arg {argEp = Irr, unArg = (DCon "Zero" [])},Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Nil1" []}])},
+Arg {argEp = Irr, unArg = (DCon "Zero" [])},
+Arg {argEp = Irr, unArg = TyChar}]
+
+Def head (Pos "pi-tests/Translate.pi" (line 8, column 8) (Lam Irr (<A> Lam Irr (<n> Lam Rel (<x> Pos "pi-tests/Translate.pi" (line 8, column 21) (Case (Pos "pi-tests/Translate.pi" (line 8, column 26) (Pos "pi-tests/Translate.pi" (line 8, column 26) (Var 0@0))) [Match (<(PatCon "Cons1" [(PatVar m,Irr),(PatVar y,Rel),(PatVar ys,Rel)])> Pos "pi-tests/Translate.pi" (line 9, column 24) (Pos "pi-tests/Translate.pi" (line 9, column 24) (Var 0@1)))]))))),
+[Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 12) Type) (<A> Pos "pi-tests/Translate.pi" (line 7, column 21) (Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 24) (TCon "Nat" [])) (<n> Pos "pi-tests/Translate.pi" (line 7, column 32) (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var 2@0))))),Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 24) (TCon "Nat" [])) (<n> Pos "pi-tests/Translate.pi" (line 7, column 32) (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var A9))),Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}]) (<_2> Var A9),TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}],Var A9])
+
+[Arg {argEp = Rel, unArg = (DCon "Cons1" [Arg {argEp = Irr, unArg = (DCon "Zero" [])},Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Nil1" []}])},Arg {argEp = Irr, unArg = Pos "pi-tests/Translate.pi" (line 13, column 18) (DCon "Zero" [])},Arg {argEp = Irr, unArg = Pos "pi-tests/Translate.pi" (line 13, column 11) TyChar}]

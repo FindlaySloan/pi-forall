@@ -11,6 +11,7 @@ import Data.Char (toLower)
 import Control.Monad.State
 import Unsafe.Coerce
 import System.IO.Unsafe
+import Data.Foldable
 
 -- This is the main data structure
 data InterDef =
@@ -212,7 +213,24 @@ generateFunctionImpl f@(FunctionImpl name argNames _) l@(Lam Rel bnd) = do
 -- | This will generate for a function application
 generateFunctionImpl f@(FunctionImpl name argNames lines) a@(App term arg) = do
 
--- TODO UNDO
+---- TODO UNDO
+--  case arg of
+--    (Arg Irr argTerm) -> do
+--       (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get
+--       let syntheticVariable = (getVarName $ varNumber + 1)
+--       put (interDefs, varNumber + 1, syntheticVariable : varStack, captureStack, tail typeStack, decls) -- Remving the ret type of app
+--       termInterDef <- generateFunctionImpl f term
+--       (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get
+--       put (interDefs, varNumber, varStack, captureStack, tail typeStack, decls) -- Removing the arg type
+--       return termInterDef
+--    (Arg Rel argTerm) -> do
+--      (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get
+--      let termVar = (getVarName $ varNumber + 1)
+--      let argVar = (getVarName $ varNumber + 2)
+--      put (interDefs, varNumber + 2, termVar : argVar : varStack, captureStack, tail typeStack, decls) -- Remving the ret type of app
+--      termInterDef <- generateFunctionImpl (FunctionImpl name argNames []) term
+--      argInterDef <- generateFunctionImpl (FunctionImpl name argNames []) argTerm
+--      return $ FunctionImpl name argNames ((cLines argInterDef) ++ (cLines termInterDef) ++ lines )
   let (funcTerm, args) = squashApps a -- Squashing the applications into a function and the list of args
   generateFunctionImplFromApp f funcTerm args
 
@@ -341,6 +359,7 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
       (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
       let actualType = head typeStack
 --      let mainType = getCTypeFromConstructorName interDefs conName
+
       mainType <- generateCType actualType
 --      tempInfo <- case head typeStack of
 --        (Pi _ _ _) -> return $ "###pi###"
@@ -354,8 +373,17 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
                                                                                                                   Rel -> a : acc
                                                                                             ) [] args)
       put (interDefs, varNumber + (length args),  (argSyntheticVars ++ varStack), captureStack, tail typeStack, decls) -- Putting the new vars on the stack
-      interDefForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (map (unArg) args)
-      return $ FunctionImpl name argNames ((concat $ map cLines interDefForArgs) ++ ( (start ++ "_" ++ mainType ++ "::_"++ conName ++ "(" ++ (concat $ intersperse "," (argSyntheticVars)) ++ ")") : lines))
+--      interDefForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (map (unArg) (foldr (\a@(Arg e _) acc -> case e of
+--                                                                                                                        Irr -> acc
+--                                                                                                                        Rel -> a : acc
+--                                                                                                  ) [] args))
+      interDefForArgs <- mapM (\arg@(Arg ep term) -> case ep of
+                                                        Irr -> do
+                                                          (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get -- Getting new state
+                                                          put (interDefs, varNumber, varStack, captureStack, tail typeStack, decls)
+                                                          return $ FunctionImpl name argNames []
+                                                        Rel -> (generateFunctionImpl (FunctionImpl name argNames []) term)) (args)
+      return $ FunctionImpl name argNames ((concat $ map cLines interDefForArgs) ++ ( (start ++ mainType ++ "::_"++ conName ++ "(" ++ (concat $ intersperse "," (argSyntheticVars)) ++ ")") : lines))
 
       where
 --        relevantArgs =
@@ -406,7 +434,10 @@ generateFunctionImplForPattern (PatCon name args) scrutType = do
   put (interDefs, varNumber + 1, (tail $ tail varStack), captureStack, typeStack, decls) -- Updating the stack
   (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
   put (interDefs, varNumber, returnSyntheticVar : scrutinisedSyntheticVar : varStack, captureStack, typeStack, decls) -- Updating the stack
-  argLines <- mapM (getArgsLines castedSyntheticVar) $ zip [1..] args
+  argLines <- mapM (getArgsLines castedSyntheticVar) $ zip [1..] (foldr (\a@((PatVar t), e) acc -> case e of
+                                                                                             Irr -> acc
+                                                                                             Rel -> a : acc
+                                                                       ) [] args)
   return $ "case " ++ name ++ ": {" ++ "auto " ++ castedSyntheticVar ++ " = " ++ "*(" ++ patternType ++ "*)" ++ scrutinisedSyntheticVar ++ ".data;" ++ (concat argLines)
 
   where
@@ -495,19 +526,45 @@ generateFunctionImplFromApp :: InterDef -> Term -> [Arg] -> State TranslatorStat
 generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
   (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
   --let syntheticVar = head varStack -- Popping the variable from the stack
-
-  let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] args) -- Generate the argument synthetic var
-  put (interDefs, varNumber + (length args),  ( varStack), captureStack, tail typeStack, decls) -- Putting the new vars on the stack
+  let newArgs = foldr (\a@(Arg ep term) acc -> case ep of
+                                                  Irr -> acc
+                                                  Rel -> a : acc
+                      ) [] args
+  let argSyntheticVars = map (\(i, _) -> getVarName $ varNumber + i) (zip [1..] newArgs) -- Generate the argument synthetic var
+  put (interDefs, varNumber + (length args),  ( varStack), captureStack, drop (length args) typeStack, decls) -- Putting the new vars on the stack
+  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
+  let termType = head typeStack
   interDefForTerm <- generateFunctionImpl (FunctionImpl name argNames []) t -- Generating interDef for the term
+  templateInfo <- generateTemplateInfo termType t args
   let newLines = ({--"auto " ++ syntheticVar ++ " = " ++ " " ++ --}(concat functionCall)) : lines
-      functionCall = (cLines interDefForTerm) ++ [argsAsString]
+      functionCall = (cLines interDefForTerm) ++ [templateInfo] ++  [argsAsString]
       argsAsString = concat $ map (\s ->  "(" ++ s ++ ")") argSyntheticVars
   (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get -- Getting new state
-  put (interDefs, varNumber,  argSyntheticVars ++( varStack), captureStack, typeStack, decls) -- Putting the new vars on the stack -TODO CHECK ALLOWED TO CHANGE
-  interDefsForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
+  put (interDefs, varNumber,  argSyntheticVars ++ ( varStack), captureStack, typeStack, decls) -- Putting the new vars on the stack -TODO CHECK ALLOWED TO CHANGE
+--  unsafeCoerce $ unsafePerformIO $ putStrLn $ show args
+  interDefsForArgs <- mapM (\arg@(Arg ep term) -> case ep of
+                                                          Irr -> do
+                                                            (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get -- Getting new state
+                                                            put (interDefs, varNumber, varStack, captureStack, tail typeStack, decls)
+                                                            return $ FunctionImpl name argNames []
+                                                          Rel -> (generateFunctionImpl (FunctionImpl name argNames []) term)) (reverse $ args)
   return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines)
-  
+  where
 
+    generateTemplateInfo :: Type -> Type -> [Arg] -> State TranslatorState String
+    generateTemplateInfo actualType (Var n) args = do
+        let argsFilter = genTemplateFromPi actualType
+        let templateArgs = map (\(b, (Arg e t)) -> t) $ filter (\(b, a) -> b) (zip argsFilter (reverse args))
+        stringArgs <- mapM (generateCType) templateArgs
+        if length stringArgs > 0
+          then return $ "<" ++ (concat $ intersperse "," stringArgs) ++ ">"
+          else return $ ""
+    generateTemplateInfo _ _ _ = return ""
+    genTemplateFromPi :: Type -> [Bool]
+    genTemplateFromPi (Pi ep ty bnd) = genTemplateFromPi ty ++ genTemplateFromPi (snd $ unsafeUnbind bnd)
+    genTemplateFromPi Type = [True]
+    genTemplateFromPi (Pos _ t) = genTemplateFromPi t
+    genTemplateFromPi t = [False]
 -- generateFunctionImplFromApp (FunctionImpl name argNames lines) (Var varName) args = do
 --   (interDefs, varNumber, varStack, captureStack) <- get -- Getting the state
 --   let syntheticVar = head varStack -- Popping the variable from the stack
@@ -599,23 +656,23 @@ generateCType (TCon name args) =
       case filter (\(Data tcName _ _) -> tcName == name) [x | x@(Data tcName telescope constructorDefs) <- decls] of
         [] -> undefined
         ((Data tcName telescope constructorDefs):xs)  -> do
-            let templateInfo = genTemplateTypes telescope
+            templateInfo <- genTemplateTypes telescope args
             let tInfo = genTemplateArgs templateInfo
             return $ "_" ++ name ++ tInfo
 
     where
       genTemplateArgs [] = ""
       genTemplateArgs types = "<" ++ (concat $ intersperse "," types) ++ ">"
-      genTemplateTypes (Telescope decls) = foldr (\(TypeSig (Sig name e t)) acc -> case e of
+      genTemplateTypes (Telescope decls) args = mapM (generateCType) $ foldr (\((TypeSig (Sig name e t)), Arg ep argT) acc -> case e of
                                                                                      Irr -> acc -- Irrelevant so ignore
-                                                                                     Rel -> relInner (Unbound.name2String name) acc t
-                                                  ) [] decls
-      relInner :: String -> [String] -> Type -> [String]
-      relInner name acc (Pos _ t) = relInner name acc t
-      relInner name acc (Ann t _) = relInner name acc t
-      relInner name acc (Type) = name : acc
-      relInner name acc t@(Pi _ _ bnd) = let (bndName, bndT) = unsafeUnbind bnd in relInner name acc bndT
-      relInner name acc _ = acc
+                                                                                     Rel -> relInner (Unbound.name2String name) acc t argT
+                                                  ) [] (zip decls args)
+      relInner :: String -> [Type] -> Type -> Type -> [Type]
+      relInner name acc (Pos _ t) argT = relInner name acc t argT
+      relInner name acc (Ann t _) argT = relInner name acc t argT
+      relInner name acc (Type) argT = argT : acc
+      relInner name acc t@(Pi _ _ bnd) argT = let (bndName, bndT) = unsafeUnbind bnd in relInner name acc bndT argT
+      relInner name acc _ _ = acc
 generateCType (Ann t _) = undefined
 generateCType (App term arg) = generateCType term
 generateCType (Var name) = return $ Unbound.name2String name
