@@ -82,65 +82,39 @@ inline _Nat _Nat::_Succ(_Nat _1) {
   _Nat_Succ* _innerClass = new _Nat_Succ(_1);
   return _Nat{Succ, _innerClass};
 };
-enum _enum_Vec_type { Nil1, Cons1 };
+enum _enum_Channel_type { Chan };
 template <class A>
-class _Vec {
+class _Channel {
  public:
-  enum _enum_Vec_type type;
+  enum _enum_Channel_type type;
   void* data;
-  static _Vec<A> _Nil1();
-  static _Vec<A> _Cons1(A _1, _Vec<A> _2);
+  static _Channel<A> _Chan();
 };
 template <class A>
-class _Vec_Nil1 {
+class _Channel_Chan {
  public:
-  _Vec_Nil1(){};
+  _Channel_Chan(){};
 };
 template <class A>
-class _Vec_Cons1 {
+inline _Channel<A> _Channel<A>::_Chan() {
+  _Channel_Chan<A>* _innerClass = new _Channel_Chan<A>();
+  return _Channel<A>{Chan, _innerClass};
+};
+enum _enum_Process_type { Proc };
+class _Process {
  public:
-  A _1;
-  _Vec<A> _2;
-  _Vec_Cons1(A _1, _Vec<A> _2) {
-    this->_1 = _1;
-    this->_2 = _2;
-  };
+  enum _enum_Process_type type;
+  void* data;
+  static _Process _Proc(std::function<B(A)> _1);
 };
-template <class A>
-inline _Vec<A> _Vec<A>::_Nil1() {
-  _Vec_Nil1<A>* _innerClass = new _Vec_Nil1<A>();
-  return _Vec<A>{Nil1, _innerClass};
+class _Process_Proc {
+ public:
+  std::function<B(A)> _1;
+  _Process_Proc(std::function<B(A)> _1) { this->_1 = _1; };
 };
-template <class A>
-inline _Vec<A> _Vec<A>::_Cons1(A _1, _Vec<A> _2) {
-  _Vec_Cons1<A>* _innerClass = new _Vec_Cons1<A>(_1, _2);
-  return _Vec<A>{Cons1, _innerClass};
+inline _Process _Process::_Proc(std::function<B(A)> _1) {
+  _Process_Proc* _innerClass = new _Process_Proc(_1);
+  return _Process{Proc, _innerClass};
 };
-template <class A>
-extern std::function<A(_Vec<A>)> head;
-template <class A>
-std::function<A(_Vec<A>)> head = [](auto x) {
-  auto _1 = [x]() {
-    auto _2 = x;
-    switch (_2.type) {
-      case Cons1: {
-        auto _4 = *(_Vec_Cons1<A>*)_2.data;
-        auto y = _4._1;
-        auto ys = _4._2;
-        auto _3 = y;
-        return _3;
-      }
-    }
-  }();
-  return _1;
-};
-extern char m;
-char m = []() {
-  auto _9 = 'a';
-  auto _10 = _Vec<char>::_Nil1();
-  auto _6 = _Vec<char>::_Cons1(_9, _10);
-  auto _5 = head<char>(_6);
-  return _5;
-}();
 
 int main() {}

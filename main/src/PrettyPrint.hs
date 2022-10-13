@@ -131,7 +131,7 @@ instance Disp Sig where
 
 instance Disp Decl where
   disp (Def n (term, t))  = disp n <+> PP.text "=" <+> disp term
-  disp (RecDef n r)  = disp n <+> PP.text "=" <+> disp r
+  disp (RecDef n (term, t))  = disp n <+> PP.text "=" <+> disp term
   disp (TypeSig sig) = disp sig
 {- SOLN EP -}
   disp (Demote ep)   = mempty
