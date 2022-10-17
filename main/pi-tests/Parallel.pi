@@ -1,18 +1,30 @@
 module Parallel where
 
-data Channel [id : List Char] (A : Type) : Type where
-    Chan [id] (A)
+import Translate
 
-data Process (A : Type) (B : Type) : Type where
+data Maybe (A : Type) : Type where
+    Nothing
+    Just of (A)
+
+data Channel (id : Nat) (A : Type) : Type where
+    Chan of [id : Nat]
+
+data Process (A : Type) (B : Type) (idIn : Nat) (idOut : Nat) (Channel idIn A) (Channel idOut B) : Type where
+    Proc of (f : A->B)
+
+data Pipeline (A : Type) (B : Type) (idIn : Nat)
+
+pipeline2 : [a : Nat] -> [b : Nat] -> [x : Nat] -> [y : Nat]
+         -> Dec (b=x)
+         -> Process Char Char a b (Chan [a]) (Chan [b])
+         -> Process Char Char x y (Chan [x]) (Chan [y])
+         -> Maybe Char
+pipeline2 = \ [a] [b] [x] [y] eq p1 p2 .
+    case eq of
+        Yes _   -> Just 'a'
+        No _ _  -> Nothing
+
+m : Maybe Char
+m = pipeline2 [1] [2] [2] [3] (decEqNat 2 2) (Proc (\c. c : Char -> Char)) (Proc (\d . d : Char -> Char))
 
 
-send :: [A : Type] -> [B : Type] -> [C : Type] -> Channel [id] A -> A -> (B -> C)
-send = TRUSTME
-
-receive :: [A : Type] -> [B : Type] -> Channel [id] A -> (A -> C)
-receive = TRUSTME
-
-
-
-test ::
-test = send (Chan ["a"] 1)
