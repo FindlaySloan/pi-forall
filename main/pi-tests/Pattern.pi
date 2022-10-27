@@ -1,0 +1,44 @@
+module Pattern where
+
+import Concurrency
+import IO
+import Maybe
+
+data PatternType : Type where
+    Pipeline
+    Farm
+
+data Pattern (type : PatternType) : Type where
+    PipelinePat of [type = Pipeline]
+
+producerWrapper : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> List A -> IO Unit
+producerWrapper = \ [A] [sPID] [rPID] ch list . 
+    case list of
+        Nil         -> bind [Unit] [Unit] (send [A] [sPID] [rPID] Nothing ch) (end)
+        Cons x xs   -> bind [Unit] [Unit] (send [A] [sPID] [rPID] (Just x) ch) (producerWrapper [A] [sPID] [rPID] ch xs)
+
+pipelineStageWrapper : [A : Type] -> [B : Type] -> [senderPID : PID] -> [stagePID : PID] -> [recieveingPID : PID] -> (f : A -> B) -> Channel A senderPID stagePID -> Channel B stagePID recieveingPID -> IO Unit
+pipelineStageWrapper = \ [A] [B] [sPID] [stagePID] [rPID] f receiveChannel sendChannel .
+    bindEq [Maybe A] [Unit] (receive [A] [sPID] [stagePID] receiveChannel) (\ mx . 
+    case mx of
+        Nothing -> bind [Unit] [Unit] (send [B] [stagePID] [rPID] Nothing sendChannel) (end)
+        Just x  -> bind [Unit] [Unit] (send [B] [stagePID] [rPID] (Just (f x)) sendChannel) (end)
+    )
+
+create1Pipeline : [consumerPID : PID] -> [A : Type] -> [B : Type] -> (input : List A) -> (f : A -> B) -> IO (Maybe (Pattern Pipeline))
+create1Pipeline = \ [consumerPID] [A] [B] input f . 
+    bindEq [Maybe PID] [Maybe (Pattern Pipeline)] (spawn) ( \ mProducerPID .
+    case mProducerPID of
+        Nothing             -> returnIO [Maybe (Pattern Pipeline)] Nothing
+        Just producerPID    -> bindEq [Maybe PID] [Maybe (Pattern Pipeline)] (spawn) ( \ mStagePID .
+                                case mStagePID of
+                                    Nothing         -> returnIO [Maybe (Pattern Pipeline)] Nothing -- Possible cleanup
+                                    Just stagePID   -> bindEq [Maybe (Channel A (producerPID) (stagePID))] [Maybe (Pattern Pipeline)] (link [A] [producerPID] [stagePID]) (\ mProducerToStageChannel .
+                                                        case mProducerToStageChannel of
+                                                            Nothing                     -> returnIO [Maybe (Pattern Pipeline)] Nothing
+                                                            Just producerToStageChannel -> bindEq [Maybe (Channel B (stagePID) (consumerPID))] [Maybe (Pattern Pipeline)] (link [B] [stagePID] [consumerPID]) (\ mStageToConsumerChannel .
+                                                                                            case mStageToConsumerChannel of
+                                                                                                Nothing                     -> returnIO [Maybe (Pattern Pipeline)] Nothing
+                                                                                                Just stageToConsumerChannel -> bind [PID] [Maybe (Pattern Pipeline)] (run producerPID (producerWrapper [A] [producerPID] [stagePID] producerToStageChannel input)) 
+                                                                                                                              (bind [PID] [Maybe (Pattern Pipeline)] (run stagePID (pipelineStageWrapper [A] [B] [producerPID] [stagePID] [consumerPID] (f) producerToStageChannel stageToConsumerChannel)) 
+                                                                                                                              (returnIO [Maybe (Pattern Pipeline)] (Just (PipelinePat))))))))

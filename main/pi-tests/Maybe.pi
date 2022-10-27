@@ -1,0 +1,5 @@
+module Maybe where
+
+data Maybe (A : Type) : Type where
+    Nothing
+    Just of (A)

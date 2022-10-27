@@ -1,0 +1,39 @@
+module Queue where
+
+import Maybe
+
+-- Queue Structure
+data Queue (A : Type) : Type where
+    MkQueue of (enqueueStack : List A) (dequeueStack : List A)
+
+-- Make Empty Queue
+makeQueue : [A : Type] -> Queue A
+makeQueue =  \ [A] . MkQueue Nil Nil
+
+-- Helper function, moves the entire enqueue stack into the dequeue stack. This also reverses the enqueue order, so
+-- that the overall queue ensures FIFO
+moveEnqToDeq : [A : Type] -> List A -> List A -> {enq : List A | List A}
+moveEnqToDeq = \ [A] enq deq .
+    case enq of
+        Nil         -> (enq, deq)
+        Cons x xs   -> moveEnqToDeq [A] xs (Cons x deq)
+
+-- Enqueue function
+enqueue : [A : Type] -> (x : A) -> Queue A -> Queue A
+enqueue = \[A] x queue .
+    case queue of
+        MkQueue enq deq -> case enq of
+                                Nil         -> MkQueue (Cons x Nil) deq
+                                Cons y ys   -> MkQueue (Cons x enq) deq
+
+-- Dequeue function
+dequeue : [A : Type] -> Queue A -> { x : Maybe A | Queue A }
+dequeue = \ [A] queue .
+    case queue of
+        MkQueue enq deq -> case deq of
+                                Nil         -> let (newEnq, newDeq) = moveEnqToDeq [A] enq deq in
+                                               case newDeq of
+                                                    Nil         -> (Nothing, MkQueue newEnq newDeq)
+                                                    Cons y ys   -> (Just y, MkQueue newEnq ys)
+                                Cons y ys   -> (Just y, MkQueue enq ys)
+

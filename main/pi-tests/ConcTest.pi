@@ -1,0 +1,25 @@
+module ConcTest where
+
+import Concurrency
+import IO
+import Maybe
+
+f2 : [sPID : PID] -> [rPID : PID] -> Channel Char sPID rPID -> IO Unit
+f2 = \ [sPID] [rPID] ch . bindEq [Maybe Char] [Unit] (receive [Char] [sPID] [rPID] ch ) (\ ma .
+                             (case ma of
+                                Nothing -> returnIO [Unit] ()
+                                Just a  -> print (Cons a Nil)
+                             ))
+
+
+
+f1 : IO Unit
+f1 = bindEq [Maybe PID] [Unit] (spawn) ( \ mpid .
+        case mpid of
+            Nothing -> returnIO [Unit] ()
+            Just pid -> (bindEq [Maybe (Channel Char (get_pid) (pid))] [Unit] (link [Char] [get_pid] [pid]) ( \ msCh .
+                        case msCh of
+                            Nothing  -> returnIO [Unit] ()
+                            Just sCh -> (bindEq [PID] [Unit] (run pid (f2 [get_pid] [pid] sCh)) (\ mpid .
+                                returnIO [Unit] ())))))
+

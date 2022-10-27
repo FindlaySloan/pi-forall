@@ -1,30 +1,29 @@
 module Parallel where
 
-import Translate
+import Concurrency
+import Maybe
 
-data Maybe (A : Type) : Type where
-    Nothing
-    Just of (A)
+data Process : Type where
+    Send of [SendType : Type] (x : SendType) [channelID : Nat] (Channel SendType id) (P : Process)
+    Receive of [RecType : Type]  [channelID : Nat] (RecType -> Process)
+    RunParallel of (P : Process) (Q : Process)
+    CreateChannel of [channelID : Nat] (P : Process)
+    RepSpawn of (P : Process)
+    End
 
-data Channel (id : Nat) (A : Type) : Type where
-    Chan of [id : Nat]
-
-data Process (A : Type) (B : Type) (idIn : Nat) (idOut : Nat) (Channel idIn A) (Channel idOut B) : Type where
-    Proc of (f : A->B)
-
-data Pipeline (A : Type) (B : Type) (idIn : Nat)
-
-pipeline2 : [a : Nat] -> [b : Nat] -> [x : Nat] -> [y : Nat]
-         -> Dec (b=x)
-         -> Process Char Char a b (Chan [a]) (Chan [b])
-         -> Process Char Char x y (Chan [x]) (Chan [y])
-         -> Maybe Char
-pipeline2 = \ [a] [b] [x] [y] eq p1 p2 .
-    case eq of
-        Yes _   -> Just 'a'
-        No _ _  -> Nothing
-
-m : Maybe Char
-m = pipeline2 [1] [2] [2] [3] (decEqNat 2 2) (Proc (\c. c : Char -> Char)) (Proc (\d . d : Char -> Char))
-
-
+prog : Process
+prog = CreateChannel [0] (RunParallel
+                             (Send [Char] 'a' [0]
+                                 (End)
+                             )
+                             (RunParallel
+                                 (Receive [Char] [0]
+                                     (\ a . CreateChannel [1]
+                                         (Send [Char] 'b' [1] (End))
+                                     )
+                                 )
+                                 (Receive [Char] [1]
+                                     ( \ a . End )
+                                 )
+                             )
+                         )

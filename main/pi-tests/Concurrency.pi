@@ -1,0 +1,64 @@
+module Concurrency where
+
+import Queue
+import Maybe
+import IO
+
+------------------ MUTABLE VARIABLES ------------------
+
+-- current_channel_id : IORef Nat
+-- current_channel_id = makeIORef [Nat] 0
+
+-- current_process_id : IORef Nat
+-- current_process_id = makeIORef [Nat] 0
+
+------------------ PID ------------------
+
+-- | PID Structure
+data PID : Type where
+    MkPID of [id : Nat]
+
+-- | This will return the PID for the current process,
+get_pid : PID
+get_pid = TRUSTME
+
+------------------ CHANNEL ------------------
+
+-- Channel Structure
+data Channel (A : Type) (sendPID : PID) (recPID : PID) : Type where
+    MkChannel of [id : Nat] [sPID : PID] [rPID : PID] [sPID = sendPID] [rPID = recPID]
+
+-- | Channel helper functions
+
+-- | This function is an enqueue to a channel
+channelEnqueue : [A : Type] -> [sPID : PID] -> [rPID : PID] -> (x : Maybe A) -> Channel A sPID rPID -> IO Unit
+channelEnqueue = TRUSTME
+
+-- | This function is an unsafe dequeue from a channel, meaning that the mutex cannot be guaranteed to be acquired
+channelDequeue : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> IO (Maybe A)
+channelDequeue = TRUSTME
+
+------------------ PI-CALC ------------------
+
+-- | Pi-Calculus functions
+
+end : IO Unit
+end = TRUSTME
+
+send : [A : Type] -> [sPID : PID] -> [rPID : PID] -> (x : Maybe A) -> Channel A sPID rPID -> IO Unit
+send = \ [A] [sPID] [rPID] x ch . channelEnqueue [A] [sPID] [rPID] x ch
+
+receive : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> IO (Maybe A)
+receive = \ [A] [sPID] [rPID] ch . channelDequeue [A] [sPID] [rPID] ch
+
+link : [A : Type] -> [sPID : PID] -> [rPID : PID] -> IO (Maybe (Channel A sPID rPID))
+link = TRUSTME
+
+spawn : IO (Maybe (PID))
+spawn = TRUSTME
+
+run : PID -> (process : IO Unit) -> IO PID
+run = TRUSTME
+
+
+

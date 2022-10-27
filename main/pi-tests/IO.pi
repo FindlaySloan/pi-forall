@@ -1,19 +1,31 @@
 module IO where
 
 data IO (A : Type) : Type where
-    IOCon of (A)
+    MkIO of (A)
 
 returnIO : [A : Type] -> A -> IO A
-returnIO = \[A] a . IOCon a
+returnIO = \[A] a . MkIO a
 
 bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
 bindEq = \ [A] [B] a f . case a of
-                            IOCon inner -> f inner
+                            MkIO inner -> f inner
 
 bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
 bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
-{--
+
 print : List Char -> IO Unit
 print = TRUSTME
---}
+
+data IORef (A : Type) : Type where
+    MkIORef of (id : Nat)
+
+makeIORef : [A : Type] -> (initVal : A) -> IO (IORef A)
+makeIORef = TRUSTME
+
+readIORef : [A : Type] -> IORef A -> IO (A)
+readIORef = TRUSTME
+
+writeIORef : [A : Type] -> IORef A -> A -> IO Unit
+writeIORef = TRUSTME
+
 

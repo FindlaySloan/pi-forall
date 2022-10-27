@@ -611,7 +611,7 @@ tcEntry (Def n term) = do
                 if n `elem` Unbound.toListOf Unbound.fv term
                   then do
                     ty <- Env.extendCtx (TypeSig sig) $ checkTypeRet (fst term) (sigType sig) -- Getting types of term, but as recursive have to extend context with the function type
-                    liftIO $ putStrLn $ show (snd ty)
+--                    liftIO $ putStrLn $ show (snd ty)
                     return $ AddCtx [TypeSig sig, RecDef n ((fst term), (snd ty))] -- TODO CHANGE
                   else do
                     ty <- checkTypeRet (fst term) (sigType sig)
