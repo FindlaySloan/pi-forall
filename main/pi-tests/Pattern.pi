@@ -42,3 +42,4 @@ create1Pipeline = \ [consumerPID] [A] [B] input f .
                                                                                                 Just stageToConsumerChannel -> bind [PID] [Maybe (Pattern Pipeline)] (run producerPID (producerWrapper [A] [producerPID] [stagePID] producerToStageChannel input)) 
                                                                                                                               (bind [PID] [Maybe (Pattern Pipeline)] (run stagePID (pipelineStageWrapper [A] [B] [producerPID] [stagePID] [consumerPID] (f) producerToStageChannel stageToConsumerChannel)) 
                                                                                                                               (returnIO [Maybe (Pattern Pipeline)] (Just (PipelinePat))))))))
+Skel - erlang
