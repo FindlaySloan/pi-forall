@@ -9,7 +9,10 @@ import Syntax
 import Environment ( D(DS, DD), TcMonad )
 import qualified Environment as Env
 import qualified Unbound.Generics.LocallyNameless as Unbound
-
+import System.IO
+import System.IO.Unsafe
+import Unsafe.Coerce
+import Data.Maybe
 import Control.Monad.Except (unless, catchError, zipWithM, zipWithM_)
 
 -- | compare two expressions for equality
@@ -104,12 +107,21 @@ equate t1 t2 = do
                               DD n1, DS "and", DD n2]
       zipWithM_ matchBr brs1 brs2       
 {- STUBWITH -}
+    (Var x, _) -> recEquate x n2
+    (_, Var x) -> recEquate x n1
     (_,_) -> tyErr n1 n2
  where tyErr n1 n2 = do 
           gamma <- Env.getLocalCtx
           Env.err [DS "Expected", DD n2,
                DS "but found", DD n1,
                DS "in context:", DD gamma]
+       recEquate x n2 = do
+         gg <- Env.getCtx
+         let mrd = listToMaybe $ map (\(Def v' a) -> fst a) $ filter (\(Def v' a) -> Unbound.name2String v' == Unbound.name2String x) [b | b@(Def v' a) <- gg]
+        --  unsafeCoerce $ unsafePerformIO $ putStrLn (show gg)
+         case mrd of 
+           Just d -> equate d n2
+           Nothing -> tyErr (Var x) n2
        
 
 {- SOLN EP -}

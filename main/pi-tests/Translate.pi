@@ -40,8 +40,7 @@ ZnotS : (y : Nat) -> Zero = (Succ y) -> Void
 ZnotS = \y pf2 . contra pf2
 
 decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
-decEqNat = \a b . TRUSTME
-{--
+decEqNat = \a b . 
   case a of
      Zero -> case b of
                Zero -> Yes Refl
@@ -51,4 +50,4 @@ decEqNat = \a b . TRUSTME
                 Succ m -> case (decEqNat n m) of
                            Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
                            No t p -> No (Succ n = Succ m) (\h . p (succInjective n m h))
---}
+
