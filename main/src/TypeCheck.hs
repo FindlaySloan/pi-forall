@@ -498,7 +498,8 @@ declarePats dc pats (Def x ty : tele) = do
 declarePats dc ((pat, _) : pats) (TypeSig (Sig x ep ty) : tele) = do
   ds1 <- declarePat pat ep ty
   let tm = pat2Term pat
-  ds2 <- Env.extendCtxs ds1 $ declarePats dc pats (Unbound.subst x tm tele)
+  newTele <- (doSubst [(x, tm)] tele)
+  ds2 <- Env.extendCtxs ds1 $ declarePats dc pats (Unbound.subst x tm newTele)
   return (ds1 ++ ds2)
 declarePats dc []   [] = return []
 declarePats dc []    _ = Env.err [DS "Not enough patterns in match for data constructor", DD dc]
