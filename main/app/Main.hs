@@ -66,6 +66,7 @@ goFilename pathToMainFile = do
   putStrLn "type checking..."
   d <- runTcMonad emptyEnv (tcModules val)
   defs <- d `exitWith` putTypeError
+  putStrLn "Program Type Checks"
 --  putStrLn $ "-----------CTX AST---------------"
 --  let initAST = ctx emptyEnv
 --  putStrLn $ show $ ctx emptyEnv
@@ -83,7 +84,7 @@ goFilename pathToMainFile = do
 --  let cCode = concat $ generateCCode interDefs
 --  putStrLn cCode
 --  output cCode
-  putStrLn $ render $ disp (last defs)
+  -- putStrLn $ render $ disp (last defs)
 
 -- | This function will write the code to a cpp file, main section is temp
 output :: String -> IO ()

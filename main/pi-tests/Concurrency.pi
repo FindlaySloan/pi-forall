@@ -3,7 +3,7 @@ module Concurrency where
 import Queue
 import Maybe
 import IO
-
+import ProofHelper
 ------------------ MUTABLE VARIABLES ------------------
 
 -- current_channel_id : IORef Nat
@@ -15,27 +15,23 @@ import IO
 ------------------ PID ------------------
 
 -- | PID Structure
-data PID : Type where
-    MkPID of [id : Nat]
-
--- | This will return the PID for the current process,
-get_pid : PID
-get_pid = TRUSTME
+data PID (pid : Nat) : Type where
+    MkPID of [id : Nat] [id = pid]
 
 ------------------ CHANNEL ------------------
 
 -- Channel Structure
-data Channel (A : Type) (sendPID : PID) (recPID : PID) : Type where
-    MkChannel of [id : Nat] [sPID : PID] [rPID : PID] [sPID = sendPID] [rPID = recPID]
+data Channel (A : Type) (chid : Nat) : Type where
+    MkChannel of [id : Nat] [id = chid]
 
 -- | Channel helper functions
 
 -- | This function is an enqueue to a channel
-channelEnqueue : [A : Type] -> [sPID : PID] -> [rPID : PID] -> (x : Maybe A) -> Channel A sPID rPID -> IO Unit
+channelEnqueue : [A : Type] -> [id : Nat] -> (x : Maybe A) -> Channel A id -> IO Unit
 channelEnqueue = TRUSTME
 
 -- | This function is an unsafe dequeue from a channel, meaning that the mutex cannot be guaranteed to be acquired
-channelDequeue : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> IO (Maybe A)
+channelDequeue : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
 channelDequeue = TRUSTME
 
 ------------------ PI-CALC ------------------
@@ -45,22 +41,21 @@ channelDequeue = TRUSTME
 end : IO Unit
 end = TRUSTME
 
-send : [A : Type] -> [sPID : PID] -> [rPID : PID] -> (x : Maybe A) -> Channel A sPID rPID -> IO Unit
-send = \ [A] [sPID] [rPID] x ch . channelEnqueue [A] [sPID] [rPID] x ch
+send : [A : Type] -> [id : Nat] -> (x : Maybe A) -> Channel A id -> IO Unit
+send = \ [A] [id] x ch . channelEnqueue [A] [id] x ch
 
-receive : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> IO (Maybe A)
-receive = \ [A] [sPID] [rPID] ch . channelDequeue [A] [sPID] [rPID] ch
+receive : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
+receive = \ [A] [id] ch . channelDequeue [A] [id] ch
 
-link : [A : Type] -> [sPID : PID] -> [rPID : PID] -> IO (Maybe (Channel A sPID rPID))
+link : [A : Type] -> [id : Nat] -> IO (Maybe (Channel A id))
 link = TRUSTME
 
-spawn : IO (Maybe (PID))
-spawn = TRUSTME
+spawn : (pid : Nat) -> (pidSet : List Nat) -> ((Elem Nat pid pidSet) -> Void) -> IO (Maybe ({newPid : PID pid | List Nat}))
+spawn = \ pid pidSet pf . returnIO [Maybe ({newPid : PID pid | List Nat})] (Just (MkPID [pid], Cons pid pidSet))
 
-run : PID -> (process : IO Unit) -> IO PID
-run = TRUSTME
+run : (pid : Nat) -> (pidSet : List Nat) -> ((Elem Nat pid pidSet)) -> (process : IO Unit) -> IO (Maybe ({newPid : PID pid | List Nat}))
+run = \ pid pidSet pf process . returnIO [Maybe ({newPid : PID pid | List Nat})] (Just (MkPID [pid], Cons pid pidSet))
 
 
-
-spawn : (pid : Set pid) -> (pid | Proccess pid && set pid U new pid)
+--spawn : (pid : Set pid) -> (pid | Proccess pid && set pid U new pid)
 

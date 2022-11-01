@@ -222,6 +222,8 @@ decEqList = \a b . case a of
                    No t2 con2 -> No ((Cons x xs : List Nat) = (Cons y ys : List Nat)) (lemma_x_neq_xs_neq [Nat] [x] [xs] [y] [ys] con con2)
 
 
+
+
 {- --------------------------------------- -}
 
 data SnocList (a : Type) : Type where 
