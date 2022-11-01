@@ -270,8 +270,12 @@ tcTerm t@(Case scrut alts) (Just ty) = do
                                decls' <- Equal.unify [] scrut' (pat2Term pat)
                                y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
                                return y) alts
-
-  exhaustivityCheck scrut' (fst sty) pats
+  -- unsafeCoerce $ unsafePerformIO $ putStrLn ((show scrut) ++ "\n" ++ (show scrut') ++ "\n"++ (show pats) ++ "\n")
+  case scrut' of
+    DCon dcName _ -> case pats of
+                  (PatCon pcName _:[])  -> return ()
+                  _                     -> exhaustivityCheck scrut' (fst sty) pats
+    _         -> exhaustivityCheck scrut' (fst sty) pats
   return (ty, [(fst sty)] ++  (concat $ map (snd) x))
 {- STUBWITH -}
 {- SOLN EQUAL -}
@@ -499,7 +503,7 @@ declarePats dc ((pat, _) : pats) (TypeSig (Sig x ep ty) : tele) = do
   ds1 <- declarePat pat ep ty
   let tm = pat2Term pat
   newTele <- (doSubst [(x, tm)] tele)
-  ds2 <- Env.extendCtxs ds1 $ declarePats dc pats (Unbound.subst x tm newTele)
+  ds2 <- Env.extendCtxs ds1 $ declarePats dc pats newTele --(Unbound.subst x tm newTele)
   return (ds1 ++ ds2)
 declarePats dc []   [] = return []
 declarePats dc []    _ = Env.err [DS "Not enough patterns in match for data constructor", DD dc]
@@ -702,18 +706,25 @@ exhaustivityCheck scrut ty pats = do
   (Telescope delta, mdefs) <- Env.lookupTCon tcon
   case mdefs of
     Just datacons -> do
+      
       loop pats datacons
       where
         loop [] [] = return ()
         loop [] dcons = do
+          
+
           l <- checkImpossible dcons
+          
           if null l
             then return ()
             else Env.err $ DS "Missing case for" : map DD l
         loop (PatVar x : _) dcons = return ()
         loop (PatCon dc args : pats') dcons = do
+          
           (ConstructorDef _ _ (Telescope tele), dcons') <- removeDCon dc dcons
+          
           tele' <- substTele delta tys tele
+          
           let (aargs, pats'') = relatedPats dc pats'
           -- check the arguments of the data constructor
           checkSubPats dc tele' (args : aargs)
@@ -731,6 +742,7 @@ exhaustivityCheck scrut ty pats = do
                 return [dc]
               )
               `catchError` (\_ -> return [])
+          
           others <- checkImpossible rest
           return (this ++ others)
     Nothing ->
