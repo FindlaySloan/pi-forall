@@ -58,6 +58,10 @@ data Elem (a : Type) (x : a) (B : List a) : Type where
 
 data Void : Type where {}   -- no constructors
 
+data Disjoint (A : Type) (a : List A) (b : List A) : Type where
+     DNil of [a = Nil]
+     DCons of (x : A) (xs : List A) (pfForx : (Elem A x b) -> Void) (Disjoint A xs b) [a = Cons x xs]
+
 Not : Type -> Type
 Not = \a . (a -> Void)
 
@@ -132,6 +136,9 @@ neitherHereNorThere = \[x] [y] [xs] xneqy xninxs p . case p of
 falseElem1 : [x : Nat] -> (p : Elem Nat x Nil) -> Void
 falseElem1 = \[x] p . case p of {} 
 
+xNotInNil : (A : Type) -> (x : A) -> (p : Elem A x Nil) -> Void
+xNotInNil = \ A x p . case p of {} 
+
 isElem : (x : Nat) -> (xs : List Nat) -> Dec (Elem Nat x xs)
 isElem = \x xs . case xs of 
     Nil -> No (Elem Nat x Nil) (falseElem1 [x])
@@ -142,6 +149,33 @@ isElem = \x xs . case xs of
           case (isElem x xs) of
              Yes xinxs -> Yes (There y x xs xinxs)
              No t2 xninxs -> No (Elem Nat x (Cons y xs)) (neitherHereNorThere [x] [y] [xs] xneqy xninxs)
+
+lemma_y_empty_disjoint : (A : Type) -> (a : List A) -> (b : List A) -> (b = Nil) -> Disjoint A a b
+lemma_y_empty_disjoint = \ A a b pf . case a of
+  Nil       -> DNil
+  Cons x xs -> DCons x xs (subst xNotInNil A x by pf) (lemma_y_empty_disjoint A xs b pf)
+
+lemma_x_in_b : (A : Type) -> (x : A) -> (a : List A) -> (b : List A) -> (Elem A x (Cons x a)) -> (Elem A x b) -> ((Disjoint A (Cons x a) b) -> Void)
+lemma_x_in_b = \ A x a b xInA xInB pf . case pf of 
+    DCons i is pfFori others -> pfFori xInB
+
+lemma_xs_in_b : (A : Type) -> (x : A) -> (xs : List A) -> (b : List A) -> ((Disjoint A xs b) -> Void) -> ((Disjoint A (Cons x xs) b) -> Void)
+lemma_xs_in_b = \ A x xs b pf p. case p of 
+  DCons i is pfFori others  -> pf others
+
+decDisjointLists : (a : List Nat) -> (b : List Nat) -> Dec (Disjoint Nat a b)
+decDisjointLists = \ a b . case a of
+  Nil       -> Yes (DNil)
+  Cons x xs -> 
+    case b of
+      Nil       -> Yes (lemma_y_empty_disjoint Nat a b (Refl))
+      Cons y ys -> 
+        case (decDisjointLists xs b) of
+          Yes pf    -> 
+            case (isElem x b) of
+              Yes elemPf  -> No (Disjoint Nat a b) (lemma_x_in_b Nat x xs b (Here x xs) elemPf)
+              No prop p   -> Yes (DCons x xs (p) pf)
+          No prop p -> No (Disjoint Nat a b) (lemma_xs_in_b Nat x xs b p)
 
 consInjLem :  [x : Nat] -> [xs : List Nat] -> [y : Nat] -> [ys : List Nat] 
            -> (x = y) -> (xs = ys) -> (Cons x xs : List Nat) = (Cons y ys : List Nat)
