@@ -44,4 +44,9 @@ head : [a : Type] -> List a -> a
 head = \[a] xs . case xs of 
   Nil -> TRUSTME  -- cannot remove b/c of exhaustivity check
   Cons y ys -> y
+
+tail : [a : Type] -> List a -> List a
+tail = \[a] xs . case xs of 
+   Nil -> Nil 
+   Cons x xs -> xs
   

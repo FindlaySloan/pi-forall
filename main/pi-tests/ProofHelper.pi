@@ -1,6 +1,6 @@
 module ProofHelper where
 
-
+import ListLib
 
 data NonEmpty (A : Type) (xs : List A) : Type where
     IsNonEmpty of (a : A) (as : List A) [xs=Cons a as]
@@ -8,10 +8,10 @@ data NonEmpty (A : Type) (xs : List A) : Type where
 
 
 
-map : [a : Type] -> [b : Type] -> (f : a -> b) -> (xs : List a) -> List b 
-map = \[a] [b] f xs . case xs of
-  Nil -> Nil 
-  Cons x xs -> Cons (f x) (map [a] [b] f xs)
+-- map : [a : Type] -> [b : Type] -> (f : a -> b) -> (xs : List a) -> List b 
+-- map = \[a] [b] f xs . case xs of
+--   Nil -> Nil 
+--   Cons x xs -> Cons (f x) (map [a] [b] f xs)
 
 {- 
 ||| Get the first element of a non-empty list
@@ -20,15 +20,9 @@ head : (l : List a) -> {auto ok : NonEmpty l} -> a
 head []      {ok=IsNonEmpty} impossible
 head (x::xs) {ok=p}    = x
 -}
-
-head : [A : Type] -> (x : A) -> (xs : List A) -> A
-head = \[A] x xs . x
      
 
-tail : [a : Type] -> List a -> List a
-tail = \[a] xs . case xs of 
-   Nil -> Nil 
-   Cons x xs -> xs
+
 
 
 data Maybe (A : Type) : Type where 
@@ -234,6 +228,23 @@ lemma_x_neq_xs_neq : [A :Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : L
 lemma_x_neq_xs_neq = \[A][x][xs][y][ys]p p2 p3 . 
      p (justXEq [A] [x] [y] (f_equal [List A] [Maybe A] [head' [A]] [Cons x xs] [Cons y ys] p3))
 
+lemma_non_empty_not_Z : [A : Type] -> (x : A) -> (xs : List A) -> (NonEmpty A (Cons x xs)) -> ((length [A] (Cons x xs) = 0) -> Void)
+lemma_non_empty_not_Z = \ [A] x xs nonEmptyPf p . PRINTME
+
+lemma_cons_length_not_Z : [A : Type] -> (x : A) -> (xs : List A) -> ((length [A] (Cons x xs) = 0) -> Void)
+lemma_cons_length_not_Z = \ [A] x xs p . TRUSTME
+
+
+deqListLength : (A : Type) -> (n : Nat) -> (a : List A) -> Dec (length [A] a = n)
+deqListLength = \ A n a . case a of
+  Nil -> 
+    case n of 
+      Zero    -> Yes Refl
+      Succ m  -> No (length [A] a = n) (ZnotS m)
+  Cons x xs ->
+    case n of
+      Zero    -> TRUSTME --No (length [A] a = n) (negEqSym Nat Zero (Succ n) (ZnotS n))
+      Succ m  -> TRUSTME
 
 decEqList : (a : List Nat) -> (b : List Nat) -> Dec (a = b)
 decEqList = \a b . case a of 

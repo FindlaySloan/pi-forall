@@ -3,6 +3,8 @@ module Pattern where
 import Concurrency
 import IO
 import Maybe
+import ListLib
+import ProofHelper
 
 data PatternType : Type where
     Pipeline
@@ -10,7 +12,7 @@ data PatternType : Type where
 
 data Pattern (type : PatternType) : Type where
     PipelinePat of [type = Pipeline]
-
+{--
 producerWrapper : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> List A -> IO Unit
 producerWrapper = \ [A] [sPID] [rPID] ch list . 
     case list of
@@ -42,4 +44,32 @@ create1Pipeline = \ [consumerPID] [A] [B] input f .
                                                                                                 Just stageToConsumerChannel -> bind [PID] [Maybe (Pattern Pipeline)] (run producerPID (producerWrapper [A] [producerPID] [stagePID] producerToStageChannel input)) 
                                                                                                                               (bind [PID] [Maybe (Pattern Pipeline)] (run stagePID (pipelineStageWrapper [A] [B] [producerPID] [stagePID] [consumerPID] (f) producerToStageChannel stageToConsumerChannel)) 
                                                                                                                               (returnIO [Maybe (Pattern Pipeline)] (Just (PipelinePat))))))))
-Skel - erlang
+--}
+
+gg : (length [Nat] <1> = 1)
+gg = Refl
+
+create1Pipeline2 : [A : Type] 
+                -> [B : Type] 
+                -> (inputPids : List Nat) 
+                -> (length [Nat] inputPids = 3)
+                -> (pidSet : List Nat) 
+                -> (dijointPidPf : Disjoint Nat inputPids pidSet)
+                -> (inputChids : List Nat)
+                -> (length [Nat] inputChids = 3)
+                -> (chidSet : List Nat) 
+                -> (disjointChidPf : Disjoint Nat inputChids chidSet)
+                -> (input : List A) 
+                -> (f : A -> B) 
+                -> IO (Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}}))
+create1Pipeline2 = \ [A] [B] inPids pidLengthPf pidSet pidDisjointPf inChids lengthChidPf chidSet chidDisjointPf input f .
+    case inPids of
+        Nil -> returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing
+        Cons pid1 pids -> 
+            case pids of
+                Nil -> returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing
+                Cons pid2 pids -> 
+                    case pids of 
+                        Nil -> returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing
+                        Cons pid3 pids -> 
+                            returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing

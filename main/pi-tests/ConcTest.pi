@@ -20,14 +20,19 @@ main = case (isElem 0 Nil : Dec (Elem Nat 0 Nil)) of
         No prop p   -> 
             bindEq [Maybe ({newPid : PID 0 | List Nat})] [Unit] (spawn 0 <> p) ( \ mpid .
                 case mpid of
-                    Nothing         -> returnIO [Unit] ()
-                    Just pidAndSet  -> let (pid, pidSet) = pidAndSet in
-                                        (bindEq [Maybe (Channel Char 0)] [Unit] (link [Char] [0]) ( \ msCh .
-                                            case msCh of
-                                                Nothing  -> returnIO [Unit] ()
-                                                Just sCh -> 
-                                                    case (isElem 0 pidSet) of
-                                                        Yes pf      -> (bindEq [Maybe ({returnedPid : PID 0 | List Nat})] [Unit] (run 0 pidSet (pf) (f2 [0] sCh)) (\ mpid .
-                                                                        returnIO [Unit] ()))
-                                                        No prop cPf -> returnIO [Unit] ()
-                                                )))
+                    Nothing         ->  returnIO [Unit] ()
+                    Just pidAndSet  ->  
+                        let (pid, pidSet) = pidAndSet in
+                        case (isElem 0 <>) of
+                            No prop cPf ->
+                                (bindEq [Maybe ({ch : Channel Char 0 | List Nat})] [Unit] (link [Char] 0 <> cPf) ( \ msCh . 
+                                    case msCh of
+                                        Nothing  -> returnIO [Unit] ()
+                                        Just sCh -> 
+                                            let (ch, chidSet) = sCh in 
+                                            case (isElem 0 pidSet) of
+                                                Yes pf      -> (bindEq [Maybe ({returnedPid : PID 0 | List Nat})] [Unit] (run 0 pidSet (pf) (f2 [0] ch)) (\ mpid .
+                                                                returnIO [Unit] ()))
+                                                No prop cPf -> returnIO [Unit] ()
+                                            )))
+                                            

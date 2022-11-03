@@ -47,7 +47,7 @@ send = \ [A] [id] x ch . channelEnqueue [A] [id] x ch
 receive : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
 receive = \ [A] [id] ch . channelDequeue [A] [id] ch
 
-link : [A : Type] -> [id : Nat] -> IO (Maybe (Channel A id))
+link : [A : Type] -> (id : Nat) -> (idSet : List Nat) -> ((Elem Nat id idSet) -> Void) -> IO (Maybe ({ch : Channel A id | List Nat}))
 link = TRUSTME
 
 spawn : (pid : Nat) -> (pidSet : List Nat) -> ((Elem Nat pid pidSet) -> Void) -> IO (Maybe ({newPid : PID pid | List Nat}))

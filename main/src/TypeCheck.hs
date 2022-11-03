@@ -362,7 +362,7 @@ tcTerm t@(LetPair p bnd) (Just ty) = {- SOLN EQUAL -} do
 {- STUBWITH Env.err [DS "unimplemented"] -}
 
 tcTerm PrintMe (Just ty) = do
-  gamma <- Env.getCtx
+  gamma <- Env.getLocalCtx
   Env.warn [DS "Unmet obligation.\nContext:", DD gamma,
         DS "\nGoal:", DD ty]
   return (ty, [ty])
