@@ -1,0 +1,253 @@
+-- This code was provided by Chris Brown
+
+module ProofPrelude where
+
+import ListLib
+
+data NonEmpty (A : Type) (xs : List A) : Type where
+    IsNonEmpty of (a : A) (as : List A) [xs=Cons a as]
+
+
+
+
+-- map : [a : Type] -> [b : Type] -> (f : a -> b) -> (xs : List a) -> List b 
+-- map = \[a] [b] f xs . case xs of
+--   Nil -> Nil 
+--   Cons x xs -> Cons (f x) (map [a] [b] f xs)
+
+{- 
+||| Get the first element of a non-empty list
+||| @ ok proof that the list is non-empty
+head : (l : List a) -> {auto ok : NonEmpty l} -> a
+head []      {ok=IsNonEmpty} impossible
+head (x::xs) {ok=p}    = x
+-}
+     
+
+
+
+
+data Maybe (A : Type) : Type where 
+  Nothing 
+  Just of (a : A)
+
+head' : [A : Type] -> (l : List A) -> Maybe A 
+head' = \[A] l . case l of 
+  Nil -> Nothing 
+  Cons x xs -> Just x
+
+data Tuple (A : Type) (B : Type) : Type where
+  Tup of (a : A) (b : B) 
+
+
+fst : [a : Type] -> [b: Type] -> (t : Tuple a b) -> a
+fst = \[a] [b] t . case t of 
+  Tup x y -> x 
+
+snd : [a : Type] -> [b: Type] -> (t : Tuple a b) -> b
+snd = \[a] [b] t . case t of 
+  Tup x y -> y 
+
+data Elem (a : Type) (x : a) (B : List a) : Type where
+     Here of (x : a) (xs : List a) [B=Cons x xs]
+     There of (y : a) (x : a) (xs : List a) (later : Elem a x xs) [B=Cons y xs]
+
+data Void : Type where {}   -- no constructors
+
+
+
+Not : Type -> Type
+Not = \a . (a -> Void)
+
+data Dec (a : Type) : Type where 
+  Yes of (prf : a)
+  No  of (prop : Type) (cont : Not prop) [a=prop] 
+
+falseEmpty1 : [A : Type] -> (p : NonEmpty A Nil) -> Void
+falseEmpty1 = \[x] p . case p of {} 
+
+nonEmpty : (A : Type) -> (xs : List A) -> Dec (NonEmpty A xs)
+nonEmpty = \A xs . 
+  case xs of 
+    Nil -> No (NonEmpty A Nil) (falseEmpty1 [A])
+    Cons x xs -> Yes (IsNonEmpty x xs)
+
+ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
+ZnotS = \n r . contra r
+
+sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
+sym = \ [A] [x] [y] pf .
+  subst Refl by pf 
+
+negEqSym : (t : Type) -> (a : t) -> (b : t) -> (a = b -> Void) -> (b = a -> Void)
+negEqSym = \t a b p h . p (sym [t] [b] [a] h)
+
+f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
+f_equal = \[A][B][f][x][y] pf . 
+  subst Refl by pf
+
+f_equal2 :  [A:Type] -> [B : Type] -> [C : Type]
+         -> [f : A -> B -> C] 
+         -> [x:A] -> [z : B] -> [y:A]
+         -> x = y  
+         -> f x z = f y z
+f_equal2 = \[A][B][C][f][x][z][y] pf . 
+  subst Refl by pf
+
+
+pred : Nat -> Nat
+pred = \n . case n of 
+    Zero -> Zero
+    Succ n -> n
+
+predS : (a : Nat) -> pred (Succ a) = a
+predS = \a . case a of 
+    Zero -> Refl
+    Succ a -> Refl
+
+succInjective : (left : Nat) -> (right : Nat) -> (p : Succ left = Succ right) -> (left = right)
+succInjective = \left right p .
+  f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
+
+decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
+decEqNat = \a b . case a of 
+     Zero -> case b of 
+               Zero -> Yes Refl 
+               Succ n -> No (Zero = Succ n) (ZnotS n)
+     Succ n -> case b of 
+                Zero -> No (Succ n = Zero) (negEqSym Nat Zero (Succ n) (ZnotS n))
+                Succ m -> case (decEqNat n m) of 
+                           Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
+                           No prop p -> No (Succ n = Succ m) (\h . ((p : prop -> Void) ((succInjective n m h) : (n=m))) : ((Succ n) = (Succ m)) -> Void)
+
+
+neitherHereNorThere : [x : Nat] -> [y : Nat] -> [xs : List Nat] 
+                   -> Not (x = y) -> Not (Elem Nat x xs) -> Not (Elem Nat x (Cons y xs))
+neitherHereNorThere = \[x] [y] [xs] xneqy xninxs p . case p of 
+    Here a as -> xneqy Refl
+    There b a as prf -> xninxs prf
+
+falseElem1 : [x : Nat] -> (p : Elem Nat x Nil) -> Void
+falseElem1 = \[x] p . case p of {} 
+
+
+isElem : (x : Nat) -> (xs : List Nat) -> Dec (Elem Nat x xs)
+isElem = \x xs . case xs of 
+    Nil -> No (Elem Nat x Nil) (falseElem1 [x])
+    Cons y xs -> 
+      case (decEqNat x y) of
+         Yes p -> Yes (subst (Here x xs) by p)
+         No t xneqy -> 
+          case (isElem x xs) of
+             Yes xinxs -> Yes (There y x xs xinxs)
+             No t2 xninxs -> No (Elem Nat x (Cons y xs)) (neitherHereNorThere [x] [y] [xs] xneqy xninxs)
+
+consInjLem :  [x : Nat] -> [xs : List Nat] -> [y : Nat] -> [ys : List Nat] 
+           -> (x = y) -> (xs = ys) -> (Cons x xs : List Nat) = (Cons y ys : List Nat)
+consInjLem = \[x] [xs] [y] [ys] prf1 prf2 . 
+  subst (f_equal [List Nat] [List Nat] [\a . Cons x a] [xs] [ys] prf2) by prf1
+
+
+lemma_val_not_nil : [A : Type] -> [x : A] -> [xs : List A] -> ((Cons x xs : List A) = Nil -> Void)
+lemma_val_not_nil = \[A] [x] [xs] prf . contra prf
+
+consInjective : [A : Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : List A] 
+             -> (x = y) 
+             -> (p : (Cons x xs : List A) = (Cons y ys : List A)) 
+             -> xs = ys
+consInjective = \[A] [x] [xs] [y] [ys] p1 p2 . 
+     subst (f_equal [List A] [List A] [tail [A]] [Cons x xs] [Cons y ys] p2) by p1
+
+
+
+fromMaybe : [A : Type] -> (def : A) -> Maybe A -> A
+fromMaybe = \[a] def m . case m of 
+  Nothing -> def 
+  Just x -> x 
+
+
+justXEq : [A : Type] -> [x : A] -> [y : A] -> ((Just x : Maybe A) = (Just y : Maybe A)) -> x = y
+justXEq = \[A][x][y] prf . f_equal [Maybe A] [A] [fromMaybe [A] x] [Just x] [Just y] prf
+
+consInjectiveTail : [A : Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : List A] 
+                 -> (xs = ys) 
+                 -> (p : (Cons x xs : List A) = (Cons y ys : List A)) 
+                 -> x = y
+consInjectiveTail = \[A] [x] [xs] [y] [ys] p1 p2 . 
+     justXEq [A] [x] [y] (f_equal [List A] [Maybe A] [head' [A]] [Cons x xs] [Cons y ys] p2)
+
+
+lemma_x_eq_xs_neq : [A :Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : List A] 
+                 -> (x = y) 
+                 -> (xs = ys -> Void) 
+                 -> ((Cons x xs : List A) = (Cons y ys : List A)-> Void)
+lemma_x_eq_xs_neq = \[A] [x] [xs] [y] [ys] prf1 p prf2 . p (consInjective [A] [x] [xs] [y] [ys] prf1 prf2)
+
+lemma_x_neq_xs_eq : [A :Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : List A] 
+                 -> (x = y -> Void) 
+                 -> (xs = ys) 
+                 -> ((Cons x xs : List A) = (Cons y ys : List A) -> Void)
+lemma_x_neq_xs_eq = \[A] [x] [xs] [y] [ys] p p2 p3 . p (consInjectiveTail [A] [x] [xs] [y] [ys] p2 p3)
+
+-- lemma_x_neq_xs_neq : {x : t, xs : List t, y : t, ys : List t} -> (x = y -> Void) -> (xs = ys -> Void) -> ((x :: xs) = (y :: ys) -> Void)
+-- lemma_x_neq_xs_neq p p' Refl = p Refl
+
+lemma_x_neq_xs_neq : [A :Type] -> [x : A] -> [xs : List A] -> [y : A] -> [ys : List A] 
+                 -> (x = y -> Void)
+                 -> (xs = ys -> Void)
+                 -> ((Cons x xs : List A) = (Cons y ys : List A) -> Void)
+lemma_x_neq_xs_neq = \[A][x][xs][y][ys]p p2 p3 . 
+     p (justXEq [A] [x] [y] (f_equal [List A] [Maybe A] [head' [A]] [Cons x xs] [Cons y ys] p3))
+
+decEqList : (a : List Nat) -> (b : List Nat) -> Dec (a = b)
+decEqList = \a b . case a of 
+    Nil -> 
+      case b of 
+       Nil -> Yes Refl 
+       Cons x xs -> No ((Nil : List Nat) = (Cons x xs : List Nat)) (negEqSym (List Nat) (Cons x xs) Nil (lemma_val_not_nil [Nat] [x] [xs]))
+    Cons x xs ->
+      case b of 
+        Nil -> No ((Cons x xs : List Nat) = (Nil : List Nat)) (lemma_val_not_nil [Nat] [x] [xs])
+        Cons y ys -> 
+          case (decEqNat x y) of
+             Yes prf -> 
+                case (decEqList xs ys) of 
+                   Yes prf2 -> Yes (consInjLem [x] [xs] [y] [ys] prf prf2)
+                   No t2 con2 -> No ((Cons x xs : List Nat) = (Cons y ys : List Nat)) (lemma_x_eq_xs_neq [Nat] [x] [xs] [y] [ys] prf con2)
+             No t con -> 
+                case (decEqList xs ys) of 
+                   Yes prf2 -> No ((Cons x xs : List Nat) = (Cons y ys : List Nat)) (lemma_x_neq_xs_eq [Nat] [x] [xs] [y] [ys] con prf2)
+                   No t2 con2 -> No ((Cons x xs : List Nat) = (Cons y ys : List Nat)) (lemma_x_neq_xs_neq [Nat] [x] [xs] [y] [ys] con con2)
+
+
+
+
+{- --------------------------------------- -}
+
+data SnocList (a : Type) : Type where 
+  Lin 
+  SCons of (xs : SnocList a) (x : a)
+
+data SnocElem (a : Type) (x : a) (B : SnocList a) : Type where
+     SnocHere of (x : a) (xs : SnocList a) [B=SCons xs x]
+     SnocThere of (y : a) (x : a) (xs : SnocList a) (later : SnocElem a x xs) [B=SCons xs y]
+
+snocneitherHereNorThere : [x : Nat] -> [y : Nat] -> [xs : SnocList Nat] 
+                   -> Not (x = y) -> Not (SnocElem Nat x xs) -> Not (SnocElem Nat x (SCons xs y))
+snocneitherHereNorThere = \[x] [y] [xs] xneqy xninxs p . case p of 
+    SnocHere a as -> xneqy Refl
+    SnocThere b a as prf -> xninxs prf
+
+snocfalseElem1 : [x : Nat] -> (p : SnocElem Nat x Lin) -> Void
+snocfalseElem1 = \[x] p . case p of {} 
+
+isElemSnoc : (x : Nat) -> (xs : SnocList Nat) -> Dec (SnocElem Nat x xs)
+isElemSnoc = \x xs . case xs of 
+    Lin -> No (SnocElem Nat x Lin) (snocfalseElem1 [x])
+    SCons xs y -> 
+      case (decEqNat x y) of
+         Yes p -> Yes (subst (SnocHere x xs) by p)
+         No t xneqy -> 
+          case (isElemSnoc x xs) of
+             Yes xinxs -> Yes (SnocThere y x xs xinxs)
+             No t2 xninxs -> No (SnocElem Nat x (SCons xs y)) (snocneitherHereNorThere [x] [y] [xs] xneqy xninxs)
