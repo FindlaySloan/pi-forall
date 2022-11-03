@@ -4,6 +4,9 @@ import Queue
 import Maybe
 import IO
 import ProofHelper
+import ProofPrelude
+import Vec
+
 ------------------ MUTABLE VARIABLES ------------------
 
 -- current_channel_id : IORef Nat
@@ -26,6 +29,11 @@ data Channel (A : Type) (chid : Nat) : Type where
 
 -- | Channel helper functions
 
+-- | Primative to create a channel with id, returns true or false if made,
+-- | Assumes that the id is a unique channel id
+prim_create_channel : [A : Type] -> (id : Nat) -> Bool
+prim_create_channel = TRUSTME 
+
 -- | This function is an enqueue to a channel
 channelEnqueue : [A : Type] -> [id : Nat] -> (x : Maybe A) -> Channel A id -> IO Unit
 channelEnqueue = TRUSTME
@@ -47,15 +55,21 @@ send = \ [A] [id] x ch . channelEnqueue [A] [id] x ch
 receive : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
 receive = \ [A] [id] ch . channelDequeue [A] [id] ch
 
-link : [A : Type] -> (id : Nat) -> (idSet : List Nat) -> ((Elem Nat id idSet) -> Void) -> IO (Maybe ({ch : Channel A id | List Nat}))
-link = TRUSTME
+link : [A : Type] -> (id : Nat) -> (n : Nat) -> (idSet : Vec Nat n) -> ((ElemVec Nat n id idSet) -> Void) 
+    -> IO (Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}))
+link = \ [A] id n idSet pf . case (prim_create_channel [A] id) of
+    True    -> 
+        returnIO [Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet})]
+            (Just ((MkChannel [id], (ConsV [n] id idSet, Refl ))))
+    False   -> returnIO [Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet})] Nothing
 
-spawn : (pid : Nat) -> (pidSet : List Nat) -> ((Elem Nat pid pidSet) -> Void) -> IO (Maybe ({newPid : PID pid | List Nat}))
-spawn = \ pid pidSet pf . returnIO [Maybe ({newPid : PID pid | List Nat})] (Just (MkPID [pid], Cons pid pidSet))
+spawn : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet) -> Void)
+     -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | ((ConsV [n] newPid pidSet : Vec Nat (Succ n)) = newPidSet) }}))
+spawn = \ pid n pidSet pf . 
+    returnIO [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | ((ConsV [n] newPid pidSet : Vec Nat (Succ n)) = newPidSet) }})] 
+        (Just (pid, (ConsV [n] pid pidSet, Refl)))
 
-run : (pid : Nat) -> (pidSet : List Nat) -> ((Elem Nat pid pidSet)) -> (process : IO Unit) -> IO (Maybe ({newPid : PID pid | List Nat}))
-run = \ pid pidSet pf process . returnIO [Maybe ({newPid : PID pid | List Nat})] (Just (MkPID [pid], Cons pid pidSet))
-
-
---spawn : (pid : Set pid) -> (pid | Proccess pid && set pid U new pid)
+run : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet)) -> (process : IO Unit) 
+   -> IO (Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet}))
+run = \ pid n pidSet pf process . returnIO [Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet})] (Just (pidSet, Refl))
 
