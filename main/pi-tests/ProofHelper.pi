@@ -152,3 +152,27 @@ decEqVec = \ [n] a b . case a of
             case (decEqVec [n1] xs ys) of
               Yes xseqys    -> No ((ConsV [n1] x xs : Vec Nat n) = (ConsV [m1] y ys : Vec Nat n)) (lemma_x_neq_xs_eq_vec [Nat] [n1] [x] [xs] [y] [ys] xneqy xseqys)
               No t2 xsneqys -> No ((ConsV [n1] x xs : Vec Nat n) = (ConsV [m1] y ys : Vec Nat n)) (lemma_x_neq_xs_neq_vec [Nat] [n1] [x] [xs] [y] [ys] xneqy xsneqys)
+
+
+data UniqueVec (A : Type) (n : Nat) (v : Vec A n) : Type where
+  UNilV of [v = NilV] -- Constructor for when V is empty
+  UConsV of (m : Nat) (x : A) (xs : Vec A m) (Not (ElemVec A m x xs)) (UniqueVec A m xs) [n = Succ m] [v = ConsV [m] x xs]
+
+lemma_x_in_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> (ElemVec A n x xs) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
+lemma_x_in_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
+  UConsV m x xs xNInXs others -> xNInXs pf
+
+lemma_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> ((UniqueVec A n xs) -> Void) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
+lemma_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
+  UConsV m x xs xNInXs others -> pf others
+
+decUniqueVec : (n : Nat) -> (v : Vec Nat n) -> Dec (UniqueVec Nat n v)
+decUniqueVec = \ n v . case v of 
+  NilV           -> Yes UNilV
+  ConsV [m] x xs ->
+    case (isElemVec (pred n) x xs) of
+      Yes xInXs    -> No (UniqueVec Nat n v) (lemma_x_in_xs_not_unique [Nat] [m] [x] [xs] xInXs)
+      No t1 xNInXs ->
+        case (decUniqueVec (pred n) xs) of
+          Yes xsU ->  Yes (UConsV (pred n) x xs xNInXs xsU)
+          No t2 xsNU -> No (UniqueVec Nat n v) (lemma_xs_not_unique [Nat] [m] [x] [xs] xsNU)
