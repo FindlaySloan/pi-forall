@@ -25,7 +25,7 @@ data PID (pid : Nat) : Type where
 
 -- Channel Structure
 data Channel (A : Type) (chid : Nat) : Type where
-    MkChannel of [id : Nat] [id = chid]
+    MkChannel of (id : Nat) [id = chid]
 
 -- | Channel helper functions
 
@@ -35,11 +35,11 @@ prim_create_channel : [A : Type] -> (id : Nat) -> Bool
 prim_create_channel = TRUSTME 
 
 -- | This function is an enqueue to a channel
-channelEnqueue : [A : Type] -> [id : Nat] -> (x : Maybe A) -> Channel A id -> IO Unit
+channelEnqueue : [A : Type] -> (id : Nat) -> (x : Maybe A) -> Channel A id -> IO Unit
 channelEnqueue = TRUSTME
 
 -- | This function is an unsafe dequeue from a channel, meaning that the mutex cannot be guaranteed to be acquired
-channelDequeue : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
+channelDequeue : [A : Type] -> (id : Nat) -> Channel A id -> IO (Maybe A)
 channelDequeue = TRUSTME
 
 ------------------ PI-CALC ------------------
@@ -49,25 +49,25 @@ channelDequeue = TRUSTME
 end : IO Unit
 end = TRUSTME
 
-send : [A : Type] -> [id : Nat] -> (x : Maybe A) -> Channel A id -> IO Unit
-send = \ [A] [id] x ch . channelEnqueue [A] [id] x ch
+send : [A : Type] -> (id : Nat) -> (x : Maybe A) -> Channel A id -> IO Unit
+send = \ [A] id x ch . channelEnqueue [A] id x ch
 
-receive : [A : Type] -> [id : Nat] -> Channel A id -> IO (Maybe A)
-receive = \ [A] [id] ch . channelDequeue [A] [id] ch
+receive : [A : Type] -> (id : Nat) -> Channel A id -> IO (Maybe A)
+receive = \ [A] id ch . channelDequeue [A] id ch
 
 link : [A : Type] -> (id : Nat) -> (n : Nat) -> (idSet : Vec Nat n) -> ((ElemVec Nat n id idSet) -> Void) 
-    -> IO (Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}))
+    -> IO (Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}}))
 link = \ [A] id n idSet pf . case (prim_create_channel [A] id) of
     True    -> 
-        returnIO [Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet})]
-            (Just ((MkChannel [id], (ConsV [n] id idSet, Refl ))))
-    False   -> returnIO [Maybe ((Channel A id) * {newIdSet : Vec Nat (Succ n) | (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet})] Nothing
+        returnIO [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}})]
+            (Just ((id, (MkChannel id, (ConsV [n] id idSet, (Refl, Refl))))))
+    False   -> returnIO [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}})] Nothing
 
 spawn : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet) -> Void)
-     -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | ((ConsV [n] newPid pidSet : Vec Nat (Succ n)) = newPidSet) }}))
+     -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }})) -- Note: Need to keep pf (pid = newPid) as used in pattern library
 spawn = \ pid n pidSet pf . 
-    returnIO [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | ((ConsV [n] newPid pidSet : Vec Nat (Succ n)) = newPidSet) }})] 
-        (Just (pid, (ConsV [n] pid pidSet, Refl)))
+    returnIO [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }})] 
+        (Just (pid, (ConsV [n] pid pidSet, (Refl, Refl))))
 
 run : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet)) -> (process : IO Unit) 
    -> IO (Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet}))

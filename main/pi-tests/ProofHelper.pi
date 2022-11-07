@@ -155,7 +155,7 @@ decEqVec = \ [n] a b . case a of
 
 
 data UniqueVec (A : Type) (n : Nat) (v : Vec A n) : Type where
-  UNilV of [v = NilV] -- Constructor for when V is empty
+  UNilV of [v = NilV] [n = 0]-- Constructor for when V is empty
   UConsV of (m : Nat) (x : A) (xs : Vec A m) (Not (ElemVec A m x xs)) (UniqueVec A m xs) [n = Succ m] [v = ConsV [m] x xs]
 
 lemma_x_in_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> (ElemVec A n x xs) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
@@ -165,6 +165,7 @@ lemma_x_in_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
 lemma_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> ((UniqueVec A n xs) -> Void) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
 lemma_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
   UConsV m x xs xNInXs others -> pf others
+
 
 decUniqueVec : (n : Nat) -> (v : Vec Nat n) -> Dec (UniqueVec Nat n v)
 decUniqueVec = \ n v . case v of 
@@ -176,3 +177,34 @@ decUniqueVec = \ n v . case v of
         case (decUniqueVec (pred n) xs) of
           Yes xsU ->  Yes (UConsV (pred n) x xs xNInXs xsU)
           No t2 xsNU -> No (UniqueVec Nat n v) (lemma_xs_not_unique [Nat] [m] [x] [xs] xsNU)
+
+data SubsetVec (A : Type) (n : Nat) (a : Vec A n) (m : Nat) (b : Vec A m): Type where
+  SNilV1 of [n = 0] [a = NilV]
+  SNilV2 of [m = 0] [b = NilV]
+  SConsV of [n1 : Nat] (x : A) (xs : Vec A n1) (pfForx : (ElemVec A m x b))  (SubsetVec A n1 xs m b) [n = Succ n1] [a = ConsV [n1] x xs]
+
+lemma_x_not_in_b_vec : [A : Type] -> (x : A) -> (n : Nat) -> (xs : Vec A n) -> (y : A) -> (m : Nat) -> (ys : Vec A m) -> ((ElemVec A (Succ m) x (ConsV [m] y ys)) -> Void) -> ((SubsetVec A (Succ n) (ConsV [n] x xs) (Succ m) (ConsV [m] y ys)) -> Void)
+lemma_x_not_in_b_vec = \ [A] x n xs y m ys pfXNotInb pf .
+  case pf of 
+    SConsV [n1] a as pfFora others -> pfXNotInb pfFora
+
+lemma_xs_not_subset_b_vec : [A : Type] -> (x : A) -> (n : Nat) -> (xs : Vec A n) -> (y : A) -> (m : Nat) -> (ys : Vec A m) -> ((SubsetVec A n xs (Succ m) (ConsV [m] y ys)) -> Void) -> ((SubsetVec A (Succ n) (ConsV [n] x xs) (Succ m) (ConsV [m] y ys)) -> Void)
+lemma_xs_not_subset_b_vec = \ [A] x n xs y m ys xsNotSubsetPf p .
+  case p of
+    SConsV [n1] a as pfFora others -> xsNotSubsetPf others
+
+decSubsetVecs : (n : Nat) -> (a : Vec Nat n) -> (m : Nat) -> (b : Vec Nat m) -> Dec (SubsetVec Nat n a m b)
+decSubsetVecs = \ n a m b . case a of
+  NilV       -> Yes (SNilV1)
+  ConsV [n1] x xs -> 
+    case b of
+      NilV       -> Yes (SNilV2)
+      ConsV [m1] y ys -> 
+        case (decSubsetVecs (pred n) xs m b) of
+          Yes pf    -> 
+            case (isElemVec m x b) of
+              Yes elemPf  -> Yes (SConsV [n1] x xs (elemPf) pf)
+              No prop p   -> No (SubsetVec Nat n a m b) (lemma_x_not_in_b_vec [Nat] x (pred n) xs y (pred m) ys (p))
+          No prop p -> No (SubsetVec Nat n a m b) (lemma_xs_not_subset_b_vec [Nat] x (pred n) xs y (pred m) ys p)
+
+-- th_x_not_in_b_imp_x_not_in_subset_b : [A : Type] -> (x : A)

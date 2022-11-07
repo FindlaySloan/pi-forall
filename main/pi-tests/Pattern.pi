@@ -5,13 +5,35 @@ import IO
 import Maybe
 import ListLib
 import ProofHelper
+import ProofPrelude
+import Vec
 
 data PatternType : Type where
+    PipelineIncomplete
+    PipelineProducer
     Pipeline
+    PipelineInner
+    Worker
+    Stage
     Farm
+    End
 
-data Pattern (type : PatternType) : Type where
-    PipelinePat of [type = Pipeline]
+data Pattern (inType : Type) (outType : Type) (type : PatternType) : Type where
+    WorkerPat of [inputType : Type] [outputType : Type] (workerPid : Nat) (f : inputType -> outputType) [type = Worker] [inputType = inType] [outputType = outType]
+    PipelineProducerPat of [inputType : Type] (producerPid : Nat) (List inputType) [type = PipelineProducer] [inputType = inType] [inputType = outType]
+    PipelineInnerPat of 
+        [inputType : Type] [outputType : Type] (n : Nat) (Vec ({inT : Type | {outT : Type | {headPatternType : PatternType | Pattern inT outT headPatternType}}}) (Succ n))
+        (chids : Vec Nat n) (pfChidUnique : UniqueVec Nat n chids) [type = PipelineInner] [inputType = inType] [outputType = outType] -- Include proof that pattern type != any pipeline
+    PipelineIncompletePat of [inputType : Type] [outputType : Type] [type = PipelineIncomplete] [inputType = inType] [outputType = outType]
+    PipelinePat of [inputType : Type] [outputType : Type]  [producerPid : Nat] [consumerPid : Nat] [producerChid : Nat] [consumerChid : Nat] [inner : Pattern inputType outputType PipelineInner] [type = Pipeline] [inputType = inType] [outputType = outType]
+
+getNFromPipelineInner : [inT : Type] -> [outT : Type] -> (Pattern inT outT PipelineInner) -> (Nat)
+getNFromPipelineInner = \ [inT] [outT] p . case p of
+    PipelineInnerPat [inT] [outT] m pats chids pfChidUnique -> m 
+
+getChidFromPipelineInner : [inT : Type] -> [outT : Type] -> (p1: Pattern inT outT PipelineInner) -> (Vec Nat (getNFromPipelineInner [inT] [outT] p1))
+getChidFromPipelineInner = \ [inT] [outT] p . case p of
+    PipelineInnerPat [inT] [outT] m pats chids pfChidUnique -> chids
 {--
 producerWrapper : [A : Type] -> [sPID : PID] -> [rPID : PID] -> Channel A sPID rPID -> List A -> IO Unit
 producerWrapper = \ [A] [sPID] [rPID] ch list . 
@@ -46,21 +68,212 @@ create1Pipeline = \ [consumerPID] [A] [B] input f .
                                                                                                                               (returnIO [Maybe (Pattern Pipeline)] (Just (PipelinePat))))))))
 --}
 
-gg : (length [Nat] <1> = 1)
-gg = Refl
 
-create1Pipeline2 : [A : Type] 
-                -> [B : Type] 
-                -> (inputPids : List Nat) 
-                -> (length [Nat] inputPids = 3)
-                -> (pidSet : List Nat) 
-                -> (dijointPidPf : Disjoint Nat inputPids pidSet)
-                -> (inputChids : List Nat)
-                -> (length [Nat] inputChids = 3)
-                -> (chidSet : List Nat) 
-                -> (disjointChidPf : Disjoint Nat inputChids chidSet)
-                -> (input : List A) 
-                -> (f : A -> B) 
+
+createWorker : [inputType : Type] -- Input Type for the stage
+            -> [outputType : Type] -- Output type for the stage
+            -> (pid : Nat) -- The pid used to create the stage
+            -> (n : Nat) -- The size of the pid set
+            -> (pidSet : Vec Nat n) -- The current pid set
+            -> (Not (ElemVec Nat n pid pidSet)) -- Proof that the pid is not currently in the pid set
+            -> (f : inputType -> outputType) -- The function that will be run by the worker TODO: Needs refined type information to ensure f doesn't spawn channels or processes
+            -> IO (Maybe ((Pattern inputType outputType Worker) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet})) -- Returns in IO so that operations can be binded together. Returns the Pattern and also the new set
+createWorker = \ [inputType] [outputType] inPid n pidSet pidNotInPidSetPf f . 
+    bindEq [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (inPid = newPid) * ((ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet) }})] [Maybe ((Pattern inputType outputType Worker) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})]
+        (spawn inPid n pidSet pidNotInPidSetPf)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inputType outputType Worker) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})] Nothing -- Cound't spawn pid
+            Just res    -> let (pid, rest) = res in
+                           let (newPidSet, pfs) = rest in
+                           let (pidEq, pfPidSetCorrect) = pfs in
+                           returnIO [Maybe ((Pattern inputType outputType Worker) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})] 
+                                    (Just (WorkerPat [inputType] [outputType] pid f, (ConsV [n] pid pidSet, subst (subst Refl by pfPidSetCorrect) by pidEq))))
+
+concatInitial : (inputW1 : Type) -- The input type of w1
+             -> (outputW1 : Type) -- The output type of w1
+             -> (inputW2 : Type) -- The input type of w2
+             -> (outputw2 : Type) -- The output type of w2
+             -> (typeEqPf : outputW1 = inputW2) -- Proof that the types will match up for the channel
+             -> (w1 : Pattern inputW1 outputW1 Worker) -- The first worker
+             -> (w2 : Pattern inputW2 outputw2 Worker) -- The second worker
+             -> (chid : Nat) -- The channel id used to combine the two workers
+             -> (n : Nat) -- The size of the chid set
+             -> (chidSet : Vec Nat n) -- The chid set
+             -> (Not (ElemVec Nat n chid chidSet)) -- A proof that the given chid is not currently in the chid set
+             -> (IO (Maybe ((Pattern inputW1 outputw2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] chid chidSet : Vec Nat (Succ n)) = newChidSet})))
+concatInitial = \ inW1 outW1 inW2 outW2 outW1EqinW2Pf w1 w2 inChid n chidSet chidNoInChidSetPf . 
+    bindEq [Maybe ({chid : Nat | (Channel outW1 chid) * {newIdSet : Vec Nat (Succ n) | (inChid = chid) * (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newIdSet}})] [Maybe ((Pattern inW1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})]
+        (link [outW1] inChid n chidSet chidNoInChidSetPf)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inW1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] Nothing
+            Just res    -> let (resChid, rest) = res in
+                           let (ch, rest2) = rest in
+                           let (newChidSet, pfs) = rest2 in
+                           let (idEqChidPf, pfChidSetCorrect) = pfs in
+                           returnIO [Maybe ((Pattern inW1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] 
+                                    (Just ((PipelineInnerPat [inW1] [outW2] 1 (ConsV [1] (inW1, (outW1, (Worker, w1))) (ConsV [0] (inW2, (outW2, (Worker, w2))) NilV)) (ConsV [0] resChid NilV) (UConsV 0 resChid NilV (xNotInNilV [Nat] [0] [resChid]) UNilV)), (ConsV [n] resChid chidSet, subst (subst Refl by pfChidSetCorrect) by idEqChidPf))))
+
+concatWorker : (inputP1 : Type) -- The input type of p1
+            -> (outputP1 : Type) -- The output type of p1
+            -> (inputW2 : Type) -- The input type of w2
+            -> (outputw2 : Type) -- The output type of w2
+            -> (typeEqPf : outputP1 = inputW2) -- Proof that the types will match up for the channel
+            -> (p1 : Pattern inputP1 outputP1 PipelineInner) -- The first pipeline inner
+            -> (w2 : Pattern inputW2 outputw2 Worker) -- The second worker
+            -> (chid : Nat) -- The channel id used to combine the two patterns
+            -> (n : Nat) -- The size of the chid set
+            -> (chidSet : Vec Nat n) -- The chid set
+            -> (Not (ElemVec Nat n chid chidSet)) -- A proof that the given chid is not currently in the chid set
+            -> (Not (ElemVec Nat (getNFromPipelineInner [inputP1] [outputP1] p1) chid (getChidFromPipelineInner [inputP1] [outputP1] p1))) -- A proof that the given chid is not curently in the p1ChidSet
+            -> (IO (Maybe ((Pattern inputP1 outputw2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] chid chidSet : Vec Nat (Succ n)) = newChidSet})))
+concatWorker = \ inP1 outP1 inW2 outW2 outP1EqInW2Pf p1 w2 inChid n chidSet chidNotInChidSetPf chidNotInP1ChidSetPf .
+    bindEq [Maybe ({chid : Nat | (Channel outP1 chid) * {newIdSet : Vec Nat (Succ n) | (inChid = chid) * (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newIdSet}})] [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})]
+        (link [outP1] inChid n chidSet chidNotInChidSetPf)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] Nothing
+            Just res    -> let (resChid, rest) = res in
+                           let (ch, rest2) = rest in
+                           let (newChidSet, pfs) = rest2 in
+                           let (idEqChidPf, pfChidSetCorrect) = pfs in
+                           case p1 of
+                            PipelineInnerPat [inT] [outT] m pats chids pfChidUnique -> 
+                                returnIO [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] 
+                                         (Just ((PipelineInnerPat [inP1] [outW2] (Succ m) (ConsV [Succ m] (inW2, (outW2, (Worker, w2))) pats) (ConsV [m] resChid chids) (UConsV m resChid chids (subst chidNotInP1ChidSetPf by idEqChidPf) pfChidUnique)), (ConsV [n] resChid chidSet, subst (subst Refl by pfChidSetCorrect) by idEqChidPf))))
+                                            
+
+{--
+concatWorker1 : (inputP1 : Type) -- The input type of p1
+             -> (outputP1 : Type) -- The output type of p1
+             -> (inputW2 : Type) -- The input type of w2
+             -> (outputw2 : Type) -- The output type of w2
+             -> (typeEqPf : outputP1 = inputW2) -- Proof that the types will match up for the channel
+             -> (p1 : Pattern inputP1 outputP1 PipelineInner) -- The first pipeline inner
+             -> (w2 : Pattern inputW2 outputw2 Worker) -- The second worker
+             -> (chid : Nat) -- The channel id used to combine the two patterns
+             -> (n : Nat) -- The size of the chid set
+             -> (chidSet : Vec Nat n) -- The chid set
+             -> (Not (ElemVec Nat n chid chidSet)) -- A proof that the given chid is not currently in the chid set
+             -> (IO (Maybe ((Pattern inputP1 outputw2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] chid chidSet : Vec Nat (Succ n)) = newChidSet})))
+concatWorker1 = \ inP1 outP1 inW2 outW2 outP1EqInW2Pf p1 w2 inChid n chidSet chidNotInChidSetPf .
+    bindEq [Maybe ({chid : Nat | (Channel outP1 chid) * {newIdSet : Vec Nat (Succ n) | (inChid = chid) * (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newIdSet}})] [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})]
+        (link [outP1] inChid n chidSet chidNotInChidSetPf)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] Nothing
+            Just res    -> let (resChid, rest) = res in
+                           let (ch, rest2) = rest in
+                           let (newChidSet, pfs) = rest2 in
+                           let (idEqChidPf, pfChidSetCorrect) = pfs in
+                           case p1 of
+                            PipelineInnerPat [inT] [outT] m pats chids pfChidUnique ->
+                                returnIO [Maybe ((Pattern inP1 outW2 PipelineInner) * {newChidSet : Vec Nat (Succ n) | (ConsV [n] inChid chidSet : Vec Nat (Succ n)) = newChidSet})] 
+                                         (Just ((PipelineInnerPat [inP1] [outW2] (Succ m) (ConsV [Succ m] (inW2, (outW2, (Worker, w2))) pats) (ConsV [m] resChid chids) (UConsV 0 resChid NilV (xNotInNilV [Nat] [0] [resChid]) UNilV)), (ConsV [n] resChid chidSet, subst (subst Refl by pfChidSetCorrect) by idEqChidPf)))) -- How proof type checks
+--}                                         
+                           
+createPipeline : [inputType : Type] -- The input type for the pipeline
+              -> [outputType : Type] -- The output type for the pipeline
+              -> (producerPid : Nat) -- The Producer Pid
+              -> (consumerPid : Nat) -- The consumer Pid
+              -> (Not (producerPid = consumerPid)) -- Proof the two pids are not the same
+              -> (n : Nat) -- The length of the pidSet
+              -> (pidSet : Vec Nat n) -- The pid set
+              -> (Not (ElemVec Nat n producerPid pidSet)) -- Proof that the producer pid is not in the pidSet
+              -> (Not (ElemVec Nat n consumerPid pidSet)) -- Proof that the consumer pid is not in the pidSet
+              -> (producerChid : Nat) -- The Producer Pid
+              -> (consumerChid : Nat) -- The consumer Pid
+              -> (Not (producerChid = consumerChid)) -- Prood that the two chids are not equal
+              -> (m : Nat) -- The length of the chid set
+              -> (chidSet : Vec Nat m) -- The chid set
+              -> (Not (ElemVec Nat m producerChid chidSet)) -- Proof that the producerChid is not in the chidSet
+              -> (Not (ElemVec Nat m consumerChid chidSet)) -- Proof that the consumerChid is not in the pichidSetdSet
+              -> (Pattern inputType outputType PipelineInner) -- The inner pipeline
+              -> (IO (Maybe ((Pattern inputType outputType Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})))
+createPipeline = \ [inT] [outT] producerPid consumerPid pfProducerPidNeqConsumerPid n pidSet pfProducerPidNotInPidSet pfConsumerPidNotInPidSet producerChid consumerChid pfProducerChidNeqPConsumerChid m chidSet pfProducerChidNotInChidSet pfConsumerChidNotInChidSet pipeInner . 
+    bindEq [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (producerPid = newPid) * ((ConsV [n] producerPid pidSet : Vec Nat (Succ n)) = newPidSet) }})] [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})]
+        (spawn producerPid n pidSet pfProducerPidNotInPidSet)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})] Nothing -- Cound't spawn pid
+            Just res    -> let (returnedProducerPid, rest) = res in
+                           let (returnedPidSet1, pfs) = rest in
+                           let (producerPidEq, pfProducerPidSetCorrect) = pfs in
+                           bindEq [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ (Succ n)) | (consumerPid = newPid) * ((ConsV [Succ n] consumerPid returnedPidSet1 : Vec Nat (Succ (Succ n))) = newPidSet) }})] [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})]
+                            (spawn consumerPid (Succ n) returnedPidSet1 (subst (neitherHereNorThereVec [n] [consumerPid] [producerPid] [pidSet] (negEqSym Nat producerPid consumerPid pfProducerPidNeqConsumerPid) pfConsumerPidNotInPidSet) by pfProducerPidSetCorrect))
+                            (\ mres . case mres of
+                                Nothing     -> returnIO [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})] Nothing -- Cound't spawn pid
+                                Just res    -> let (returnedConsumerPid, rest) = res in
+                                               let (newPidSet, pfs) = rest in
+                                               let (consumerPidEq, pfNewPidSetCorrect) = pfs in
+                                               bindEq [Maybe ({chid : Nat | (Channel inT chid) * {newIdSet : Vec Nat (Succ m) | (producerChid = chid) * (ConsV [m] producerChid chidSet : Vec Nat (Succ m)) = newIdSet}})] [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})]
+                                               (link [inT] producerChid m chidSet pfProducerChidNotInChidSet)
+                                               (\ mres . case mres of
+                                                Nothing     -> returnIO [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})] Nothing -- Cound't spawn pid
+                                                Just res    -> let (resProducerChid, rest) = res in
+                                                               let (producerCh, rest2) = rest in
+                                                               let (returnedChidSet, pfs) = rest2 in
+                                                               let (idEqProducerChidPf, pfReturnedChidSetCorrect) = pfs in
+                                                               bindEq [Maybe ({chid : Nat | (Channel outT chid) * {newIdSet : Vec Nat (Succ (Succ m)) | (consumerChid = chid) * (ConsV [Succ m] consumerChid returnedChidSet : Vec Nat (Succ (Succ m))) = newIdSet}})] [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})]
+                                                               (link [outT] consumerChid (Succ m) returnedChidSet ((subst (neitherHereNorThereVec [m] [consumerChid] [producerChid] [chidSet] (negEqSym Nat producerChid consumerChid pfProducerChidNeqPConsumerChid) pfConsumerChidNotInChidSet) by pfReturnedChidSetCorrect)))
+                                                               (\ mres . case mres of
+                                                                   Nothing     -> returnIO [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})] Nothing -- Cound't spawn pid
+                                                                   Just res    -> let (resConsumerChid, rest) = res in
+                                                                                  let (producerCh, rest2) = rest in
+                                                                                  let (newChidSet, pfs) = rest2 in
+                                                                                  let (idEqConsumerChidPf, pfNewChidSetCorrect) = pfs in
+                                                                                  returnIO [Maybe ((Pattern inT outT Pipeline) * {newChidSet : Vec Nat (Succ (Succ m)) | (ConsV [Succ m] consumerChid (ConsV [m] producerChid chidSet) : Vec Nat (Succ (Succ m))) = newChidSet} * {newPidSet : Vec Nat (Succ (Succ n)) | (ConsV [Succ n] consumerPid (ConsV [n] producerPid pidSet) : Vec Nat (Succ (Succ n))) = newPidSet})] 
+                                                                                  (Just ((PipelinePat [inT] [outT] [producerPid] [consumerPid] [producerChid] [consumerChid] [pipeInner]), ((newChidSet, subst (subst pfNewChidSetCorrect by pfReturnedChidSetCorrect) by idEqConsumerChidPf ), (newPidSet, subst (subst pfNewPidSetCorrect by pfProducerPidSetCorrect) by consumerPidEq ))))))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+createPipelineProducer : [inputType : Type] -- Input Type for the pipeline
+                      -> (pid : Nat) -- The pid used to the create the producer for the pipeline
+                      -> (n : Nat) -- The size of the pid set
+                      -> (pidSet : Vec Nat n) -- The current pid set
+                      -> (Not (ElemVec Nat n pid pidSet)) -- Proof that the pid is not currently in the pid set
+                      -> (List inputType) -- The input list
+                      -> (IO (Maybe ((Pattern inputType inputType PipelineProducer) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet})))
+createPipelineProducer = \ [inputType] inPid n pidSet pidNotInPidSetPf input.
+    bindEq [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (inPid = newPid) * ((ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet) }})] [Maybe ((Pattern inputType inputType PipelineProducer) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})]
+        (spawn inPid n pidSet pidNotInPidSetPf)
+        (\ mres . case mres of
+            Nothing     -> returnIO [Maybe ((Pattern inputType inputType PipelineProducer) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})] Nothing -- Cound't spawn pid
+            Just res    -> let (pid, rest) = res in
+                           let (newPidSet, pfs) = rest in
+                           let (pidEq, pfPidSetCorrect) = pfs in
+                           returnIO [Maybe ((Pattern inputType inputType PipelineProducer) * {newPidSet : Vec Nat (Succ n) | (ConsV [n] inPid pidSet : Vec Nat (Succ n)) = newPidSet})] 
+                                    (Just (PipelineProducerPat [inputType] pid (input), (ConsV [n] pid pidSet, subst (subst Refl by pfPidSetCorrect) by pidEq) )))
+
+
+
+{--
+create1Pipeline2 : [A : Type] -- Function input type, also type of input list 
+                -> [B : Type] -- Funciton output type, also type of output list
+                -> (inputPids : Vec Nat 3) -- The input pid vector, must contain 3 pids
+                -> (n : Nat) -- Size of pid set
+                -> (pidSet : Vec Nat n) -- pid set 
+                -> (dijointPidPf : DisjointVec Nat 3 inputPids n pidSet) -- Proof that the input pids are not in the pid set
+                -> (inputChids : Vec Nat 2) -- The input chid vectore, must contiain 2 chids
+                -> (m : Nat) -- Size of chid set
+                -> (chidSet : Vec Nat m) -- The chid set 
+                -> (disjointChidPf : DisjointVec Nat 2 inputChids m chidSet) -- Proof that inputChids not in chid set
+                -> (input : List A) -- Input list
+                -> (f : A -> B) -- The pipeline function
                 -> IO (Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}}))
 create1Pipeline2 = \ [A] [B] inPids pidLengthPf pidSet pidDisjointPf inChids lengthChidPf chidSet chidDisjointPf input f .
     case inPids of
@@ -73,3 +286,4 @@ create1Pipeline2 = \ [A] [B] inPids pidLengthPf pidSet pidDisjointPf inChids len
                         Nil -> returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing
                         Cons pid3 pids -> 
                             returnIO [Maybe ({p : Pattern Pipeline | {newPidSet : List Nat | List Nat}})] Nothing
+                            --}
