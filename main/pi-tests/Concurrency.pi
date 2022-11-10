@@ -42,6 +42,9 @@ channelEnqueue = TRUSTME
 channelDequeue : [A : Type] -> (id : Nat) -> Channel A id -> IO (Maybe A)
 channelDequeue = TRUSTME
 
+getChannelId : {id : Nat | {A : Type | Channel A id}} -> Nat
+getChannelId = \ ch . let (id, rest) = ch in id
+
 ------------------ PI-CALC ------------------
 
 -- | Pi-Calculus functions
@@ -73,3 +76,8 @@ run : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pi
    -> IO (Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet}))
 run = \ pid n pidSet pf process . returnIO [Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet})] (Just (pidSet, Refl))
 
+
+-- | Lemmas
+
+lemma_chid_eq_ch : (n : Nat) -> (chid : Nat) -> (chids : Vec Nat n) -> (ch : {id : Nat | { A : Type | Channel A id}}) -> (chs : Vec {id : Nat | { A : Type | Channel A id}} n) -> (pfIdEq : chid = (getChannelId ch))-> (pfChidEqChs : chids = (mapV [{id : Nat | { A : Type | Channel A id}}] [Nat] [n] (getChannelId) chs)) -> ((ConsV [n] chid chids : Vec Nat (Succ n)) = (mapV [{id : Nat | { A : Type | Channel A id}}] [Nat] [Succ n] (getChannelId) (ConsV [n] ch chs)))
+lemma_chid_eq_ch = \ n chid chids ch chs pfChidEq pfChidEqChs . subst (subst Refl by pfChidEq) by pfChidEqChs

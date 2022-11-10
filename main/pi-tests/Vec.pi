@@ -56,11 +56,11 @@ replicate = \[A] n x.
      Zero   -> NilV 
      Succ m -> ConsV [m] x (replicate [A] m x)
 
-map : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
-map = \[A][B][n] f v.
+mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
+mapV = \[A][B][n] f v.
   case v of 
     NilV -> NilV
-    ConsV [m] x xs -> ConsV [m] (f x) (map[A][B] [m] f xs)
+    ConsV [m] x xs -> ConsV [m] (f x) (mapV[A][B] [m] f xs)
 
 -- note: this version of map needs n at runtime
 
