@@ -1,0 +1,276 @@
+module PatternStatic where
+
+import Concurrency 
+import ProofHelper
+import ProofPrelude
+import Maybe
+import Vec
+import IO
+
+data Pipeline (size : Nat) : Type where
+  Pipeline2 of -- Pipeline with two stages (A -> B), (B -> C)
+    [A : Type] -- Input Type
+    [B : Type] -- Intermediate Type (A -> B -> C)
+    [C : Type] -- Output Type
+    (producerPid : Nat) -- The pid for the producer
+    (stage1Pid : Nat) -- The pid for stage 1
+    (stage2Pid : Nat) -- The pid for stage 2
+    (Not (producerPid = stage1Pid)) -- Proof that producerPid does not equal stage1Pid, used to ensure set uniquiness
+    (Not (stage1Pid = stage2Pid)) -- Proof that stage1Pid does not equal stage2Pid, used to ensure set uniquiness
+    (Not (producerPid = stage2Pid)) -- Proof that producerPid does not equal stage2Pid, used to ensure set uniquiness
+    (pToS1Chid : Nat) -- The chid for the channel from producer to stage 1
+    (s1toS2Chid : Nat) -- The chid fro the channel from stage 1 to stage 2
+    (s2toConsumerChid : Nat) -- The chid for the channel from stage 2 back to main process to consumer the ouput and collect to list
+    (Not (pToS1Chid = s1toS2Chid)) -- Proof that producerPid does not equal s1toS2Chid, used to ensure set uniquiness
+    (Not (s1toS2Chid = s2toConsumerChid)) -- Proof that s1toS2Chid does not equal s2toConsumerChid, used to ensure set uniquiness
+    (Not (pToS1Chid = s2toConsumerChid)) -- Proof that pToS1Chid does not equal s2toConsumerChid, used to ensure set uniquiness
+    (Channel A pToS1Chid) -- The channel from producer to stage 1
+    (Channel B s1toS2Chid) -- The channel from stage 1 to stage 2
+    (Channel C s2toConsumerChid) -- The channel from stage 2 to the consumer / collector
+    (fS1 : A -> B) -- The function for stage 1
+    (fS2 : B -> C) -- The function for stage 2
+    (n : Nat) -- The size of the pidset at time of creation
+    (pidSet : Vec Nat n) -- The pid set
+    (ElemVec Nat n producerPid pidSet) -- Proof that the producer pid is in the pid set
+    (ElemVec Nat n stage1Pid pidSet) -- Proof that the stage 1 pid is in the pid set
+    (ElemVec Nat n stage2Pid pidSet) -- Proof that the stage 2 pid is in the pid set
+    [size = 2] -- Constraint that 
+
+-- | Wrapping functions
+producerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> List A -> IO Unit
+producerWrapper = \ [A] id ch list . 
+    case list of
+        Nil         -> bind [Unit] [Unit] (send [A] id Nothing ch) (end)
+        Cons x xs   -> bind [Unit] [Unit] (send [A] id (Just x) ch) (producerWrapper [A] id ch xs)
+
+workerWrapper : [A : Type] -> [B : Type] -> (receiveId : Nat) -> (sendId : Nat) -> Channel A receiveId  -> Channel B sendId -> (f : A -> B) ->  IO Unit
+workerWrapper = \ [A] [B] receiveId sendId receiveChannel sendChannel f.
+    bindEq [Maybe A] [Unit] 
+    (receive [A] receiveId receiveChannel) 
+    (\ mx . 
+      case mx of
+          Nothing -> bind [Unit] [Unit] (send [B] sendId Nothing sendChannel) (end)
+          Just x  -> bind [Unit] [Unit] (send [B] sendId (Just (f x)) sendChannel) (workerWrapper [A] [B] receiveId sendId receiveChannel sendChannel f)
+    )
+
+consumerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> IO (List A)
+consumerWrapper = \ [A] chid ch .
+    bindEq [Maybe A] [List A] 
+    (receive [A] chid ch)
+    (\ mx .
+      case mx of
+        Nothing -> 
+          returnIO [List A] Nil
+        Just x  -> 
+          bindEq [List A] [List A] 
+          (consumerWrapper [A] chid ch) 
+          (\ res . 
+            returnIO [List A] (Cons x res)
+          )
+    )
+
+createPipeline2 : [A : Type] -- Input Type
+               -> [B : Type] -- The intermidate type
+               -> [C : Type] -- The output type
+               -> (n : Nat) -- The size of the pid set
+               -> (pidSet : Vec Nat n) -- The pid set
+               -> (producerPid : Nat) -- The producer pid
+               -> (producerNotInSet : Not (ElemVec Nat n producerPid pidSet)) -- proof that the producer pid is not in pidSet
+               -> (stage1Pid : Nat) -- The pid for stage 1
+               -> (stage1NotInSet : Not (ElemVec Nat n stage1Pid pidSet)) -- proof that the stage1Pid pid is not in the pidSet
+               -> (stage2Pid : Nat) -- The pid for stage 2
+               -> (stage2NotInSet : Not (ElemVec Nat n stage2Pid pidSet)) -- proof that the stage2Pid pid is not in the pidSet
+               -> (Not (producerPid = stage1Pid)) -- Proof that producerPid does not equal stage1Pid, used to ensure set uniquiness
+               -> (Not (stage1Pid = stage2Pid)) -- Proof that stage1Pid does not equal stage2Pid, used to ensure set uniquiness
+               -> (Not (producerPid = stage2Pid)) -- Proof that producerPid does not equal stage2Pid, used to ensure set uniquiness
+               -> (m : Nat) -- The size of the chidSet
+               -> (chidSet : Vec Nat m) -- The chidSet
+               -> (pToS1Chid : Nat) -- The channel id for the producer to S1 channel
+               -> (pToS1ChidNotInChidSet : Not (ElemVec Nat m pToS1Chid chidSet)) -- The proof that pToS1Chid is not in the chidSet
+               -> (s1toS2Chid : Nat) -- The channel id for the S1 to S2 channel
+               -> (s1toS2ChidNotInChidSet : Not (ElemVec Nat m s1toS2Chid chidSet)) -- The proof that s1ToS2Chid is not in the chidSet
+               -> (s2toCChid : Nat) -- The channel id for the S2 to consumer channel
+               -> (s2toCChidNotInChidSet : Not (ElemVec Nat m s2toCChid chidSet)) -- The proof that s2ToCChid is not in the chidSet
+               -> (Not (pToS1Chid = s1toS2Chid)) -- Proof that producerPid does not equal s1toS2Chid, used to ensure set uniquiness
+               -> (Not (s1toS2Chid = s2toCChid)) -- Proof that s1toS2Chid does not equal s2toCChid, used to ensure set uniquiness
+               -> (Not (pToS1Chid = s2toCChid)) -- Proof that pToS1Chid does not equal s2toCChid, used to ensure set uniquiness
+               -> (fS1 : A -> B) -- The first stage function
+               -> (fS2 : B -> C) -- The second stage function
+               -> (input : List A) -- The input list
+               -> IO (Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))}))
+createPipeline2 = \ [A] [B] [C] n pidSet producerPid pfProducerNotInSet stage1Pid pfStage1NotInSet stage2Pid pfStage2NotInSet pfPPidNeqS1Pid pfS1PidNeqS2Pid pfPPidNeqS2Pid m chidSet pToS1Chid pfPToS1ChidNotInChidSet s1toS2Chid pfS1toS2ChidNotInChidSet s2toCChid pfS2toCChidNotInChidSet pfPChidNeqS1Chid pfS1ChidNeqS2Chid pfPChidNeqS2Chid fS1 fS2 input .
+  
+  bindEq
+    [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (producerPid = newPid) * ((ConsV [n] producerPid pidSet : Vec Nat (Succ n)) = newPidSet) }})]
+    [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+    -- Spawning the producer pid
+    (spawn producerPid n pidSet pfProducerNotInSet)
+    
+    (\ mres . case mres of
+      Nothing ->
+        returnIO
+          [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+          
+          Nothing
+
+      Just res  -> 
+        let (returnedProducerPid, rest) = res in
+        let (returnedPidSet1, pfs) = rest in
+        let (producerPidEq, pfProducerPidSetCorrect) = pfs in
+        let pfStage1PidNotInNewSet = (subst (neitherHereNorThereVec [n] [stage1Pid] [producerPid] [pidSet] (negEqSym Nat producerPid stage1Pid pfPPidNeqS1Pid) pfStage1NotInSet) by pfProducerPidSetCorrect : ElemVec Nat (Succ n) stage1Pid returnedPidSet1 -> Void) in
+        bindEq 
+          [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ (Succ n)) | (stage1Pid = newPid) * ((ConsV [Succ n] stage1Pid returnedPidSet1 : Vec Nat (Succ (Succ n))) = newPidSet) }})]
+          [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+          -- Spawning the stage 1 pid, need complicated proof as have proof s1 not in pid set but not s1 not in (p :: pidSet)
+          (spawn stage1Pid (Succ n) returnedPidSet1 pfStage1PidNotInNewSet)
+
+          (\ mres . case mres of 
+            Nothing ->
+              returnIO
+                [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                
+                Nothing
+
+            Just res  -> 
+              let (returnedS1Pid, rest) = res in
+              let (returnedPidSet2, pfs) = rest in
+              let (s1PidEq, pfS1PidSetCorrect) = pfs in
+              let pfStage2PidNotInNewSet = (subst (neitherHereNorThereVec [Succ n] [stage2Pid] [stage1Pid] [returnedPidSet1] (negEqSym Nat stage1Pid stage2Pid pfS1PidNeqS2Pid) (subst (neitherHereNorThereVec [n] [stage2Pid] [producerPid] [pidSet] (negEqSym Nat producerPid stage2Pid pfPPidNeqS2Pid) pfStage2NotInSet) by pfProducerPidSetCorrect)) by pfS1PidSetCorrect : ElemVec Nat (Succ (Succ n)) stage2Pid returnedPidSet2 -> Void) in
+              bindEq
+                [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ (Succ (Succ n))) | (stage2Pid = newPid) * ((ConsV [Succ (Succ n)] stage2Pid returnedPidSet2 : Vec Nat (Succ (Succ (Succ n)))) = newPidSet) }})]
+                [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                -- Spawning the Stage 2 pid, need complicated proof, as have proof s2 not in pidset, but not s2 not in (s1 :: p :: pidset), need to gen proof
+                ((spawn stage2Pid (Succ (Succ n)) returnedPidSet2 pfStage2PidNotInNewSet))
+
+                (\ mres . case mres of
+                  Nothing ->
+                    returnIO
+                      [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                      
+                      Nothing
+
+                  Just res  -> 
+                    let (returnedS2Pid, rest) = res in
+                    let (returnedPidSet3, pfs) = rest in
+                    let (s2PidEq, pfS2PidSetCorrect) = pfs in
+
+                    bindEq
+                    [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ m) | (pToS1Chid = chid) * (ConsV [m] pToS1Chid chidSet : Vec Nat (Succ m)) = newIdSet}})]
+                    [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                    -- Linking producer to stage 1 to get first channel
+                    (link [A] pToS1Chid m chidSet pfPToS1ChidNotInChidSet)
+                    (\ mres . case mres of
+                      Nothing ->
+                        returnIO
+                        [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                        
+                        Nothing
+                      Just res -> 
+                        let (resPtoS1Chid, rest) = res in
+                        let (pToS1Ch, rest2) = rest in
+                        let (returnedChidSet1, pfs) = rest2 in
+                        let (idEqPtoS1ChidPf, pfReturnedChidSet1Correct) = pfs in
+                        let pfS1ToS2ChidNotInNewChidSet = (subst (neitherHereNorThereVec [m] [s1toS2Chid] [pToS1Chid] [chidSet] (negEqSym Nat pToS1Chid s1toS2Chid pfPChidNeqS1Chid) pfS1toS2ChidNotInChidSet) by pfReturnedChidSet1Correct : ElemVec Nat (Succ m) s1toS2Chid returnedChidSet1 -> Void) in
+                        bindEq 
+                        [Maybe ({chid : Nat | (Channel B chid) * {newIdSet : Vec Nat (Succ (Succ m)) | (s1toS2Chid = chid) * (ConsV [Succ m] s1toS2Chid returnedChidSet1 : Vec Nat (Succ (Succ m))) = newIdSet}})]
+                        [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                        -- Linking stage 1 to stage 2 to get second channel, need complex proof again as s1 not in chidSet, need to gen proof that s1 not in (pCh :: chidSet)
+                        (link [B] s1toS2Chid (Succ m) returnedChidSet1 pfS1ToS2ChidNotInNewChidSet)
+                        (\ mres .case mres of
+                          Nothing ->
+                            returnIO
+                            [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                            Nothing
+
+                          Just res ->
+                            let (resS1toS2Chid, rest) = res in
+                            let (s1ToS2Ch, rest2) = rest in
+                            let (returnedChidSet2, pfs) = rest2 in
+                            let (idEqS1toS2ChidPf, pfReturnedChidSet2Correct) = pfs in
+                            let pfS2toCChidNotInNewChidSet = (subst (neitherHereNorThereVec [Succ m] [s2toCChid] [s1toS2Chid] [returnedChidSet1] (negEqSym Nat s1toS2Chid s2toCChid pfS1ChidNeqS2Chid) (subst (neitherHereNorThereVec [m] [s2toCChid] [pToS1Chid] [chidSet] (negEqSym Nat pToS1Chid s2toCChid pfPChidNeqS2Chid) pfS2toCChidNotInChidSet) by pfReturnedChidSet1Correct)) by pfReturnedChidSet2Correct : ElemVec Nat (Succ (Succ m)) s2toCChid returnedChidSet2 -> Void) in
+                            bindEq 
+                            [Maybe ({chid : Nat | (Channel C chid) * {newIdSet : Vec Nat (Succ (Succ (Succ m))) | (s2toCChid = chid) * (ConsV [Succ (Succ m)] s2toCChid returnedChidSet2 : Vec Nat (Succ (Succ (Succ m)))) = newIdSet}})]
+                            [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                            -- Linking stage 2 to consumer to get third channel, need complex proof again as s2 no in chid set, need to gen proof that s2 not in (s1 :: pCh :: chidSet)
+                            (link [C] s2toCChid (Succ (Succ m)) returnedChidSet2 pfS2toCChidNotInNewChidSet)
+                            (\ mres .  TRUSTME {--case mres of
+                              Nothing ->
+                                returnIO
+                                [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                                Nothing
+
+                              Just res ->
+                                let (resS2toCChid, rest) = res in
+                                let (s2toCCh, rest2) = rest in
+                                let (returnedChidSet3, pfs) = rest2 in
+                                let (idEqS2toCChidPf, pfReturnedChidSet3Correct) = pfs in
+                                bindEq 
+                                [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+                                [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                                -- Running producer
+                                (run producerPid (Succ (Succ (Succ n))) returnedPidSet3 (ThereV [Succ (Succ n)] returnedPidSet2 stage2Pid (ThereV [Succ n] returnedPidSet1 stage1Pid (HereV [n] pidSet))) (producerWrapper [A] resPtoS1Chid pToS1Ch input))
+                                (\ mres . case mres of
+                                  Nothing -> 
+                                    returnIO
+                                    [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                                    Nothing
+
+                                  Just pfs ->
+                                    bindEq 
+                                    [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+                                    [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                                    -- Running Stage 1
+                                    (run stage1Pid (Succ (Succ (Succ n))) returnedPidSet3 (ThereV [Succ (Succ n)] returnedPidSet2 stage2Pid (HereV [Succ n] returnedPidSet1)) (workerWrapper [A] [B] resPtoS1Chid resS1toS2Chid pToS1Ch s1ToS2Ch fS1))
+                                    (\ mres . case mres of
+                                      Nothing -> 
+                                        returnIO
+                                        [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                                        Nothing
+
+                                      Just pfs ->
+                                        bindEq 
+                                        [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+                                        [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                                        -- Running Stage 2
+                                        (run stage2Pid (Succ (Succ (Succ n))) returnedPidSet3 (HereV [Succ (Succ n)] returnedPidSet2) (workerWrapper [B] [C] resS1toS2Chid resS2toCChid s1ToS2Ch s2toCCh fS2))
+                                        (\ mres . case mres of
+                                          Nothing -> 
+                                            returnIO
+                                            [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                                            Nothing
+
+                                          Just pfs -> 
+                                            bindEq 
+                                            [List C]
+                                            [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                                            (consumerWrapper [C] resS2toCChid s2toCCh)
+                                            (\ res . 
+                                              returnIO
+                                              [Maybe ((List C) * (Pipeline 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] stage2Pid (ConsV [Succ n] stage1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] s2toCChid (ConsV [Succ m] s1toS2Chid (ConsV [m] pToS1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                                              (Just (
+                                                res, -- List C
+                                                ((Pipeline2 [A] [B] [C] producerPid stage1Pid stage2Pid pfPPidNeqS1Pid pfS1PidNeqS2Pid pfPPidNeqS2Pid pToS1Chid s1toS2Chid s2toCChid pfPChidNeqS1Chid pfS1ChidNeqS2Chid pfPChidNeqS2Chid pToS1Ch s1ToS2Ch s2toCCh fS1 fS2 (Succ (Succ (Succ n))) returnedPidSet3 (ThereV [Succ (Succ n)] returnedPidSet2 stage2Pid (ThereV [Succ n] returnedPidSet1 stage1Pid (HereV [n] pidSet))) (ThereV [Succ (Succ n)] returnedPidSet2 stage2Pid (HereV [Succ n] returnedPidSet1)) (HereV [Succ (Succ n)] returnedPidSet2)), 
+                                                ((returnedPidSet3, subst (subst (subst Refl by pfS2PidSetCorrect) by pfS1PidSetCorrect) by pfProducerPidSetCorrect),
+                                                  (returnedChidSet3, subst (subst (subst Refl by pfReturnedChidSet1Correct) by pfReturnedChidSet2Correct) by pfReturnedChidSet3Correct)
+                                                )
+                                                )
+                                              ))
+                                            )
+                                            
+                                        )
+                                    )
+                                )--}
+                            ) 
+                        ) 
+                    )
+
+                )
+          )
+      )
+    
