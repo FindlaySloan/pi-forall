@@ -34,7 +34,29 @@ data Pipeline (size : Nat) : Type where
     (ElemVec Nat n producerPid pidSet) -- Proof that the producer pid is in the pid set
     (ElemVec Nat n stage1Pid pidSet) -- Proof that the stage 1 pid is in the pid set
     (ElemVec Nat n stage2Pid pidSet) -- Proof that the stage 2 pid is in the pid set
-    [size = 2] -- Constraint that 
+    [size = 2] -- Constraint that size is 2
+
+data Farm (num : Nat) : Type where
+  Farm2 of -- A farm with 2 workers
+    [A : Type] -- Input Type
+    [B : Type] -- Output Type
+    (producerPid : Nat) -- The pid for the producer
+    (worker1Pid : Nat) -- The pid of the first worker
+    (worker2Pid : Nat) -- The pid of the second worker
+    (Not (producerPid = worker1Pid)) -- Proof that producerPid does not equal worker1Pid, used to ensure set uniquiness
+    (Not (worker1Pid = worker2Pid)) -- Proof that worker1Pid does not equal worker2Pid, used to ensure set uniquiness
+    (Not (producerPid = worker2Pid)) -- Proof that producerPid does not equal worker2Pid, used to ensure set uniquiness
+    (pToW1Chid : Nat) -- The chid for producer to worker 1
+    (pToW2Chid : Nat) -- The chid for the producer to worker 2
+    (wsToCChid : Nat) -- The chid for the workers to the consumer
+    (Not (pToW1Chid = pToW2Chid)) -- Proof that pToW1Chid does not equal pToW2Chid, used to ensure set uniquiness
+    (Not (pToW2Chid = wsToCChid)) -- Proof that pToW2Chid does not equal wsToCChid, used to ensure set uniquiness
+    (Not (pToW1Chid = wsToCChid)) -- Proof that pToW1Chid does not equal wsToCChid, used to ensure set uniquiness
+    (Channel A pToW1Chid) -- The channel from producer to w1
+    (Channel A pToW2Chid) -- The channel from producer to w2
+    (Channel B wsToCChid) -- The channel for the workers to w2
+    (f : A -> B) -- The function to farm
+    [num = 2] -- Constaint that the size of the farm is 2
 
 -- | Wrapping functions
 producerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> List A -> IO Unit
@@ -68,6 +90,223 @@ consumerWrapper = \ [A] chid ch .
             returnIO [List A] (Cons x res)
           )
     )
+
+createFarmInner2 : [A : Type] -- Input Type
+                -> [B : Type] -- Output Type
+                -> (n : Nat) -- The size of the pid set
+                -> (pidSet : Vec Nat n) -- The pid set 
+                -> (producerPid : Nat) -- The pid for the producer
+                -> (Not (ElemVec Nat n producerPid pidSet)) -- Proof that the producer pid is not in the pid set
+                -> (worker1Pid : Nat) -- The pid of the first worker
+                -> (Not (ElemVec Nat n worker1Pid pidSet)) -- Proof that the worker1Pid is not in the pid set
+                -> (worker2Pid : Nat) -- The pid of the second worker
+                -> (Not (ElemVec Nat n worker2Pid pidSet)) -- Prood that the worker2Pid is not in the pid set
+                -> (Not (producerPid = worker1Pid)) -- Proof that producerPid does not equal worker1Pid, used to ensure set uniquiness
+                -> (Not (worker1Pid = worker2Pid)) -- Proof that worker1Pid does not equal worker2Pid, used to ensure set uniquiness
+                -> (Not (producerPid = worker2Pid)) -- Proof that producerPid does not equal worker2Pid, used to ensure set uniquiness
+                -> (m : Nat) -- The size of the chidSet
+                -> (chidSet : Vec Nat m) -- The chidSet
+                -> (pToW1Chid : Nat) -- The chid for producer to worker 1
+                -> (Not (ElemVec Nat m pToW1Chid chidSet)) -- Proof that the pToW1Chid is not in the chidSet
+                -> (pToW2Chid : Nat) -- The chid for the producer to worker 2
+                -> (Not (ElemVec Nat m pToW2Chid chidSet)) -- Proof that the pToW2Chid is not in the chidSet
+                -> (wsToCChid : Nat) -- The chid for the workers to the consumer
+                -> (Not (ElemVec Nat m wsToCChid chidSet)) -- Proof that the wsToCChid is not in the chidSet
+                -> (Not (pToW1Chid = pToW2Chid)) -- Proof that pToW1Chid does not equal pToW2Chid, used to ensure set uniquiness
+                -> (Not (pToW2Chid = wsToCChid)) -- Proof that pToW2Chid does not equal wsToCChid, used to ensure set uniquiness
+                -> (Not (pToW1Chid = wsToCChid)) -- Proof that pToW1Chid does not equal wsToCChid, used to ensure set uniquiness
+                -> (f : A -> B) -- The function to farm
+                -> (input : List A) -- The input list
+                -> (Channel A pToW1Chid)
+                -> (Channel A pToW2Chid)
+                -> (Channel B wsToCChid)
+                -> (returnedPidSet1 : Vec Nat (Succ n))
+                -> (returnedPidSet2 : Vec Nat (Succ (Succ n)))
+                -> (returnedPidSet3 : Vec Nat (Succ (Succ (Succ n))))
+                -> (returnedChidSet3 : Vec Nat (Succ (Succ (Succ m))))
+                -> (returnedPidSet3 = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n)))))
+                -> (returnedChidSet3 = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m)))))
+                -> IO (Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))}))
+createFarmInner2 = \ [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input pToW1Ch pToW2Ch wsToCCh returnedPidSet1 returnedPidSet2 returnedPidSet3 returnedChidSet3 pfReturnedPidSet3Correct pfReturnedChidSet3Correct . TRUSTME
+
+createFarmInner1 : [A : Type] -- Input Type
+                -> [B : Type] -- Output Type
+                -> (n : Nat) -- The size of the pid set
+                -> (pidSet : Vec Nat n) -- The pid set 
+                -> (producerPid : Nat) -- The pid for the producer
+                -> (Not (ElemVec Nat n producerPid pidSet)) -- Proof that the producer pid is not in the pid set
+                -> (worker1Pid : Nat) -- The pid of the first worker
+                -> (Not (ElemVec Nat n worker1Pid pidSet)) -- Proof that the worker1Pid is not in the pid set
+                -> (worker2Pid : Nat) -- The pid of the second worker
+                -> (Not (ElemVec Nat n worker2Pid pidSet)) -- Prood that the worker2Pid is not in the pid set
+                -> (Not (producerPid = worker1Pid)) -- Proof that producerPid does not equal worker1Pid, used to ensure set uniquiness
+                -> (Not (worker1Pid = worker2Pid)) -- Proof that worker1Pid does not equal worker2Pid, used to ensure set uniquiness
+                -> (Not (producerPid = worker2Pid)) -- Proof that producerPid does not equal worker2Pid, used to ensure set uniquiness
+                -> (m : Nat) -- The size of the chidSet
+                -> (chidSet : Vec Nat m) -- The chidSet
+                -> (pToW1Chid : Nat) -- The chid for producer to worker 1
+                -> (Not (ElemVec Nat m pToW1Chid chidSet)) -- Proof that the pToW1Chid is not in the chidSet
+                -> (pToW2Chid : Nat) -- The chid for the producer to worker 2
+                -> (Not (ElemVec Nat m pToW2Chid chidSet)) -- Proof that the pToW2Chid is not in the chidSet
+                -> (wsToCChid : Nat) -- The chid for the workers to the consumer
+                -> (Not (ElemVec Nat m wsToCChid chidSet)) -- Proof that the wsToCChid is not in the chidSet
+                -> (Not (pToW1Chid = pToW2Chid)) -- Proof that pToW1Chid does not equal pToW2Chid, used to ensure set uniquiness
+                -> (Not (pToW2Chid = wsToCChid)) -- Proof that pToW2Chid does not equal wsToCChid, used to ensure set uniquiness
+                -> (Not (pToW1Chid = wsToCChid)) -- Proof that pToW1Chid does not equal wsToCChid, used to ensure set uniquiness
+                -> (f : A -> B) -- The function to farm
+                -> (input : List A) -- The input list
+                -> (returnedPidSet1 : Vec Nat (Succ n))
+                -> (returnedPidSet2 : Vec Nat (Succ (Succ n)))
+                -> (returnedPidSet3 : Vec Nat (Succ (Succ (Succ n))))
+                -> (returnedPidSet3 = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n)))))
+                -> IO (Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))}))
+createFarmInner1 = \ [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input returnedPidSet1 returnedPidSet2 returnedPidSet3 pfReturnedPidSet3Correct . 
+  bindEq
+    [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ m) | (pToW1Chid = chid) * (ConsV [m] pToW1Chid chidSet : Vec Nat (Succ m)) = newIdSet}})]
+    [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+    -- Linking producer to stage 1 to get first channel
+    (link [A] pToW1Chid m chidSet pfPToW1ChidNotInChidSet)
+    (\ mres .  case mres of
+      Nothing ->
+        returnIO
+        [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+        
+        Nothing
+      Just res -> 
+        let (resPtoW1Chid, rest) = res in
+        let (pToW1Ch, rest2) = rest in
+        let (returnedChidSet1, pfs) = rest2 in
+        let (idEqPtoW1ChidPf, pfReturnedChidSet1Correct) = pfs in
+        let pfPToW2ChidNotInNewChidSet = (subst (neitherHereNorThereVec [m] [pToW2Chid] [pToW1Chid] [chidSet] (negEqSym Nat pToW1Chid pToW2Chid pfPToW1NeqPtoW2Chid) pfPToW2NotInChidSet) by pfReturnedChidSet1Correct : ElemVec Nat (Succ m) pToW2Chid returnedChidSet1 -> Void) in
+        bindEq 
+        [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ (Succ m)) | (pToW2Chid = chid) * (ConsV [Succ m] pToW2Chid returnedChidSet1 : Vec Nat (Succ (Succ m))) = newIdSet}})]
+        [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+        -- Linking stage 1 to stage 2 to get second channel, need complex proof again as s1 not in chidSet, need to gen proof that s1 not in (pCh :: chidSet)
+        (link [A] pToW2Chid (Succ m) returnedChidSet1 pfPToW2ChidNotInNewChidSet)
+        (\ mres . case mres of
+          Nothing ->
+            returnIO
+            [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+            Nothing
+
+          Just res ->
+            let (resPtoW2Chid, rest) = res in
+            let (pToW2Ch, rest2) = rest in
+            let (returnedChidSet2, pfs) = rest2 in
+            let (idEqPtoW2ChidPf, pfReturnedChidSet2Correct) = pfs in
+            let pfWstoCChidNotInNewChidSet = (subst (neitherHereNorThereVec [Succ m] [wsToCChid] [pToW2Chid] [returnedChidSet1] (negEqSym Nat pToW2Chid wsToCChid pfPToW2NeqWsToCChid) (subst (neitherHereNorThereVec [m] [wsToCChid] [pToW1Chid] [chidSet] (negEqSym Nat pToW1Chid wsToCChid pfPToW1ChidNeqWsToCChid) pfWsToCChidNotInChidSet) by pfReturnedChidSet1Correct)) by pfReturnedChidSet2Correct : ElemVec Nat (Succ (Succ m)) wsToCChid returnedChidSet2 -> Void) in
+            bindEq 
+            [Maybe ({chid : Nat | (Channel B chid) * {newIdSet : Vec Nat (Succ (Succ (Succ m))) | (wsToCChid = chid) * (ConsV [Succ (Succ m)] wsToCChid returnedChidSet2 : Vec Nat (Succ (Succ (Succ m)))) = newIdSet}})]
+            [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+            -- Linking stage 2 to consumer to get third channel, need complex proof again as s2 no in chid set, need to gen proof that s2 not in (s1 :: pCh :: chidSet)
+            (link [B] wsToCChid (Succ (Succ m)) returnedChidSet2 pfWstoCChidNotInNewChidSet)
+            (\ mres . case mres of
+              Nothing ->
+                returnIO
+                [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                Nothing
+
+              Just res ->
+                let (resWstoCChid, rest) = res in
+                let (wsToCCh, rest2) = rest in
+                let (returnedChidSet3, pfs) = rest2 in
+                let (idEqWsToCChidPf, pfReturnedChidSet3Correct) = pfs in
+                
+                (createFarmInner2 [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input (subst pToW1Ch by idEqPtoW1ChidPf) (subst pToW2Ch by idEqPtoW2ChidPf) (subst wsToCCh by idEqWsToCChidPf) returnedPidSet1 returnedPidSet2 returnedPidSet3 returnedChidSet3 pfReturnedPidSet3Correct (subst (subst (subst Refl by pfReturnedChidSet1Correct) by pfReturnedChidSet2Correct) by pfReturnedChidSet3Correct))
+            )
+        )
+    )
+
+createFarm2 : [A : Type] -- Input Type
+           -> [B : Type] -- Output Type
+           -> (n : Nat) -- The size of the pid set
+           -> (pidSet : Vec Nat n) -- The pid set 
+           -> (producerPid : Nat) -- The pid for the producer
+           -> (Not (ElemVec Nat n producerPid pidSet)) -- Proof that the producer pid is not in the pid set
+           -> (worker1Pid : Nat) -- The pid of the first worker
+           -> (Not (ElemVec Nat n worker1Pid pidSet)) -- Proof that the worker1Pid is not in the pid set
+           -> (worker2Pid : Nat) -- The pid of the second worker
+           -> (Not (ElemVec Nat n worker2Pid pidSet)) -- Prood that the worker2Pid is not in the pid set
+           -> (Not (producerPid = worker1Pid)) -- Proof that producerPid does not equal worker1Pid, used to ensure set uniquiness
+           -> (Not (worker1Pid = worker2Pid)) -- Proof that worker1Pid does not equal worker2Pid, used to ensure set uniquiness
+           -> (Not (producerPid = worker2Pid)) -- Proof that producerPid does not equal worker2Pid, used to ensure set uniquiness
+           -> (m : Nat) -- The size of the chidSet
+           -> (chidSet : Vec Nat m) -- The chidSet
+           -> (pToW1Chid : Nat) -- The chid for producer to worker 1
+           -> (Not (ElemVec Nat m pToW1Chid chidSet)) -- Proof that the pToW1Chid is not in the chidSet
+           -> (pToW2Chid : Nat) -- The chid for the producer to worker 2
+           -> (Not (ElemVec Nat m pToW2Chid chidSet)) -- Proof that the pToW2Chid is not in the chidSet
+           -> (wsToCChid : Nat) -- The chid for the workers to the consumer
+           -> (Not (ElemVec Nat m wsToCChid chidSet)) -- Proof that the wsToCChid is not in the chidSet
+           -> (Not (pToW1Chid = pToW2Chid)) -- Proof that pToW1Chid does not equal pToW2Chid, used to ensure set uniquiness
+           -> (Not (pToW2Chid = wsToCChid)) -- Proof that pToW2Chid does not equal wsToCChid, used to ensure set uniquiness
+           -> (Not (pToW1Chid = wsToCChid)) -- Proof that pToW1Chid does not equal wsToCChid, used to ensure set uniquiness
+           -> (f : A -> B) -- The function to farm
+           -> (input : List A) -- The input list
+           -> IO (Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))}))
+createFarm2 =  \ [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input .
+
+  bindEq
+    [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (producerPid = newPid) * ((ConsV [n] producerPid pidSet : Vec Nat (Succ n)) = newPidSet) }})]
+    [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+    -- Spawning the producer pid
+    (spawn producerPid n pidSet pfProducerNotInSet)
+    
+    (\ mres .case mres of
+      Nothing ->
+        returnIO
+          [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+          
+          Nothing
+
+      Just res  -> 
+        let (returnedProducerPid, rest) = res in
+        let (returnedPidSet1, pfs) = rest in
+        let (producerPidEq, pfProducerPidSetCorrect) = pfs in
+        let pfWorker1PidNotInNewSet = (subst (neitherHereNorThereVec [n] [worker1Pid] [producerPid] [pidSet] (negEqSym Nat producerPid worker1Pid pfProducerNeqWorker1Pid) pfWorker1NotInSet) by pfProducerPidSetCorrect : ElemVec Nat (Succ n) worker1Pid returnedPidSet1 -> Void) in
+        bindEq 
+          [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ (Succ n)) | (worker1Pid = newPid) * ((ConsV [Succ n] worker1Pid returnedPidSet1 : Vec Nat (Succ (Succ n))) = newPidSet) }})]
+          [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+          -- Spawning the stage 1 pid, need complicated proof as have proof s1 not in pid set but not s1 not in (p :: pidSet)
+          (spawn worker1Pid (Succ n) returnedPidSet1 pfWorker1PidNotInNewSet)
+
+          (\ mres . case mres of 
+            Nothing ->
+              returnIO
+                [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                
+                Nothing
+
+            Just res  -> 
+              let (returnedW1Pid, rest) = res in
+              let (returnedPidSet2, pfs) = rest in
+              let (w1PidEq, pfW1PidSetCorrect) = pfs in
+              let pfWorker2PidNotInNewSet = (subst (neitherHereNorThereVec [Succ n] [worker2Pid] [worker1Pid] [returnedPidSet1] (negEqSym Nat worker1Pid worker2Pid pfWorker1NeqWorker2Pid) (subst (neitherHereNorThereVec [n] [worker2Pid] [producerPid] [pidSet] (negEqSym Nat producerPid worker2Pid pfProducerNeqWorker2Pid) pfWorker2NotInSet) by pfProducerPidSetCorrect)) by pfW1PidSetCorrect : ElemVec Nat (Succ (Succ n)) worker2Pid returnedPidSet2 -> Void) in
+              bindEq
+                [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ (Succ (Succ n))) | (worker2Pid = newPid) * ((ConsV [Succ (Succ n)] worker2Pid returnedPidSet2 : Vec Nat (Succ (Succ (Succ n)))) = newPidSet) }})]
+                [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                -- Spawning the Stage 2 pid, need complicated proof, as have proof s2 not in pidset, but not s2 not in (s1 :: p :: pidset), need to gen proof
+                ((spawn worker2Pid (Succ (Succ n)) returnedPidSet2 pfWorker2PidNotInNewSet))
+
+                (\ mres . case mres of
+                  Nothing ->
+                    returnIO
+                      [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                      
+                      Nothing
+
+                  Just res  -> 
+                    let (returnedW2Pid, rest) = res in
+                    let (returnedPidSet3, pfs) = rest in
+                    let (w2PidEq, pfW2PidSetCorrect) = pfs in
+                    (createFarmInner1 [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input returnedPidSet1 returnedPidSet2 returnedPidSet3 (subst (subst (subst Refl by pfW2PidSetCorrect) by pfW1PidSetCorrect) by pfProducerPidSetCorrect))
+                )
+          )
+      )
+
+
 
 pipelineInnerFunc2 : [A : Type] -- Input Type
                   -> [B : Type] -- The intermidate type
