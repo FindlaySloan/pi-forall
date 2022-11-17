@@ -91,6 +91,19 @@ consumerWrapper = \ [A] chid ch .
           )
     )
 
+farm2ProducerWrapper : [A : Type] -> (w1Chid : Nat) -> (w2Chid : Nat) -> Channel A w1Chid -> Channel A w2Chid -> List A -> IO Unit
+farm2ProducerWrapper = \ [A] w1Chid w2Chid ch1 ch2 input .
+  case input of
+    Nil       -> -- Input finished on channel 1
+      bind [Unit] [Unit] (send [A] w1Chid Nothing ch1) (bind [Unit] [Unit] (send [A] w2Chid Nothing ch2) (end))
+    Cons x xs -> -- Checking for channel 2
+      case xs of 
+        Nil -> -- Input finished on channel 2
+          bind [Unit] [Unit] (send [A] w1Chid Nothing ch1) (bind [Unit] [Unit] (send [A] w2Chid Nothing ch2) (end))
+        Cons y ys -> -- Able to send on both channels
+          bind [Unit] [Unit] (send [A] w1Chid (Just x) ch1) (bind [Unit] [Unit] (send [A] w2Chid (Just y) ch2) (farm2ProducerWrapper [A] w1Chid w2Chid ch1 ch2 ys))
+
+
 createFarmInner2 : [A : Type] -- Input Type
                 -> [B : Type] -- Output Type
                 -> (n : Nat) -- The size of the pid set
@@ -127,7 +140,68 @@ createFarmInner2 : [A : Type] -- Input Type
                 -> (returnedPidSet3 = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n)))))
                 -> (returnedChidSet3 = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m)))))
                 -> IO (Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))}))
-createFarmInner2 = \ [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input pToW1Ch pToW2Ch wsToCCh returnedPidSet1 returnedPidSet2 returnedPidSet3 returnedChidSet3 pfReturnedPidSet3Correct pfReturnedChidSet3Correct . TRUSTME
+createFarmInner2 = \ [A] [B] n pidSet producerPid pfProducerNotInSet worker1Pid pfWorker1NotInSet worker2Pid pfWorker2NotInSet pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid m chidSet pToW1Chid pfPToW1ChidNotInChidSet pToW2Chid pfPToW2NotInChidSet wsToCChid pfWsToCChidNotInChidSet pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid f input pToW1Ch pToW2Ch wsToCCh returnedPidSet1 returnedPidSet2 returnedPidSet3 returnedChidSet3 pfReturnedPidSet3Correct pfReturnedChidSet3Correct .
+  bindEq 
+    [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+    [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+    -- Running producer
+    (run producerPid (Succ (Succ (Succ n))) returnedPidSet3 (ThereV [Succ (Succ n)] returnedPidSet2 worker2Pid (ThereV [Succ n] returnedPidSet1 worker1Pid (HereV [n] pidSet))) (farm2ProducerWrapper [A] pToW1Chid pToW2Chid pToW1Ch pToW2Ch input))
+    (\ mres . case mres of
+      Nothing -> 
+        returnIO
+        [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+        Nothing
+
+      Just pfs ->
+        bindEq 
+        [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+        [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+        -- Running Stage 1returnedPidSet2
+        (run worker1Pid (Succ (Succ (Succ n))) returnedPidSet3 (ThereV [Succ (Succ n)] returnedPidSet2 worker2Pid (HereV [Succ n] returnedPidSet1)) (workerWrapper [A] [B] pToW1Chid wsToCChid pToW1Ch wsToCCh f))
+        (\ mres . case mres of
+          Nothing -> 
+            returnIO
+            [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+            Nothing
+
+          Just pfs ->
+            bindEq 
+            [Maybe ({returnedPidSet : Vec Nat (Succ (Succ (Succ n))) | returnedPidSet3 = returnedPidSet})]
+            [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+            -- Running Stage 2
+            (run worker2Pid (Succ (Succ (Succ n))) returnedPidSet3 (HereV [Succ (Succ n)] returnedPidSet2) (workerWrapper [A] [B] pToW2Chid wsToCChid pToW2Ch wsToCCh f))
+            (\ mres . case mres of
+              Nothing -> 
+                returnIO
+                [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                Nothing
+
+              Just pfs -> 
+                bindEq 
+                [List B]
+                [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+                (consumerWrapper [B] wsToCChid wsToCCh)
+                (\ res . 
+                  returnIO
+                  [Maybe ((List B) * (Farm 2) * {newPidSet : Vec Nat (Succ (Succ (Succ n))) | newPidSet = (ConsV [Succ (Succ n)] worker2Pid (ConsV [Succ n] worker1Pid (ConsV [n] producerPid pidSet)) : Vec Nat (Succ (Succ (Succ n))))} * {newChidSet : Vec Nat (Succ (Succ (Succ m))) | newChidSet = (ConsV [Succ (Succ m)] wsToCChid (ConsV [Succ m] pToW2Chid (ConsV [m] pToW1Chid chidSet)) : Vec Nat (Succ (Succ (Succ m))))})]
+
+                  (Just (
+                    res, -- List B
+                    (Farm2 [A] [B] producerPid worker1Pid worker2Pid pfProducerNeqWorker1Pid pfWorker1NeqWorker2Pid pfProducerNeqWorker2Pid pToW1Chid pToW2Chid wsToCChid pfPToW1NeqPtoW2Chid pfPToW2NeqWsToCChid pfPToW1ChidNeqWsToCChid pToW1Ch pToW2Ch wsToCCh f, 
+                    ((returnedPidSet3, pfReturnedPidSet3Correct),
+                      (returnedChidSet3, pfReturnedChidSet3Correct )
+                    )
+                    )
+                  ))
+                )
+                
+            )
+        )
+    )
+
 
 createFarmInner1 : [A : Type] -- Input Type
                 -> [B : Type] -- Output Type
