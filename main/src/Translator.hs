@@ -147,6 +147,12 @@ generateFunctionDef (FunctionDef name tempArgs a retType def) (Pi Rel tyA bnd) =
 generateFunctionDef (FunctionDef name tempArgs args _ definition) t@(TCon tName tArgs) = do
   cType <- generateCType t -- Generating the C Type for the TCon
   return $ FunctionDef name tempArgs args cType cType-- TODO refactor
+
+-- | If found a Eq type
+generateFunctionDef (FunctionDef name tempArgs args _ definition) t@(TyEq a b) = do
+  cType <- generateCType t -- Generating the C Type for the TyEq
+  return $ FunctionDef name tempArgs args cType cType-- TODO refactor
+
 generateFunctionDef f t = undefined
 -- | This function will be used to check if there is an inital lambda, if not then it will make an anaomyse C function
 -- | as there is no intital lambda
@@ -404,6 +410,32 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
 --          put (interDefs, varNumber + (length args),  argSyntheticVars ++( varStack), captureStack) -- Putting the new vars on the stack
 --          interDefsForArgs <- mapM (generateFunctionImpl (FunctionImpl name argNames [])) (reverse $ map (unArg) args)
 --          return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines)
+
+-- | Generates for a subst expression
+generateFunctionImpl f@(FunctionImpl name argNames lines) t@(Subst a pf) = do
+  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  start <- case varStack of
+    [] -> do return ""
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state
+             put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls)
+             return $ "auto " ++ syntheticVar ++ " = "
+
+  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  genedA <- generateFunctionImpl (FunctionImpl name argNames []) a 
+  return $ FunctionImpl name argNames ((start ++ (concat $ cLines genedA)) : lines)
+
+generateFunctionImpl f@(FunctionImpl name argNames lines) t@(Refl) = do
+  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  start <- case varStack of
+    [] -> do return ""
+    _  -> do let syntheticVar = head varStack
+             -- Updateing state
+             put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls)
+             return $ "auto " ++ syntheticVar ++ " = "
+
+  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+  return $ FunctionImpl name argNames ((start ++ "_TyEq::_Refl()") : lines)
 
 generateFunctionImplForMatch :: Type -> Match -> State TranslatorState InterDef
 generateFunctionImplForMatch scrutType (Match bnd) = do
@@ -690,7 +722,7 @@ generateCType (If _ _ _) = undefined
 generateCType (Sigma _ _) = undefined
 generateCType (Prod _ _) = undefined
 generateCType (LetPair _ _) = undefined
-generateCType (TyEq _ _) = undefined
+generateCType (TyEq _ _) = return "_TyEq"
 generateCType Refl = undefined
 generateCType (Subst _ _) = undefined
 generateCType (Contra _) = undefined
