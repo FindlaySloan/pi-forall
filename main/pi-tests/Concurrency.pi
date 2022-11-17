@@ -76,7 +76,9 @@ run : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pi
    -> IO (Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet}))
 run = \ pid n pidSet pf process . returnIO [Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet})] (Just (pidSet, Refl))
 
-
+spawnAndRun : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> (Not (ElemVec Nat n pid pidSet)) -> (process : IO Unit)
+        -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }}))
+spawnAndRun = TRUSTME 
 -- | Lemmas
 
 lemma_chid_eq_ch : (n : Nat) -> (chid : Nat) -> (chids : Vec Nat n) -> (ch : {id : Nat | { A : Type | Channel A id}}) -> (chs : Vec {id : Nat | { A : Type | Channel A id}} n) -> (pfIdEq : chid = (getChannelId ch))-> (pfChidEqChs : chids = (mapV [{id : Nat | { A : Type | Channel A id}}] [Nat] [n] (getChannelId) chs)) -> ((ConsV [n] chid chids : Vec Nat (Succ n)) = (mapV [{id : Nat | { A : Type | Channel A id}}] [Nat] [Succ n] (getChannelId) (ConsV [n] ch chs)))
