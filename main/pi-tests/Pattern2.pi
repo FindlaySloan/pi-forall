@@ -1,0 +1,208 @@
+module Pattern2 where
+
+import Concurrency 
+import ProofHelper
+import ProofPrelude
+import Maybe
+import Nat
+import Vec
+import IO
+
+data Farm (A : Type) (n : Nat) : Type where
+  MkFarm of (B : Type) (m : Nat) (f : B -> B) [m = n] [B = A]
+
+producerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> List A -> IO Unit
+producerWrapper = \ [A] id ch list . 
+    case list of
+        Nil         -> bind [Unit] [Unit] (send [A] id Nothing ch) (end)
+        Cons x xs   -> bind [Unit] [Unit] (send [A] id (Just x) ch) (producerWrapper [A] id ch xs)
+
+workerWrapper : [A : Type] -> (receiveId : Nat) -> (sendId : Nat) -> Channel A receiveId  -> Channel A sendId -> (f : A -> A) ->  IO Unit
+workerWrapper = \ [A] receiveId sendId receiveChannel sendChannel f.
+    bindEq [Maybe A] [Unit] 
+    (receive [A] receiveId receiveChannel) 
+    (\ mx . 
+      case mx of
+          Nothing -> bind [Unit] [Unit] (send [A] sendId Nothing sendChannel) (end)
+          Just x  -> bind [Unit] [Unit] (send [A] sendId (Just (f x)) sendChannel) (workerWrapper [A] receiveId sendId receiveChannel sendChannel f)
+    )
+
+spawnWorkersFarm : [A : Type]
+                -> (n : Nat) -- The size of the pidSet
+                -> (pidSet : Vec Nat n) -- The pidSet
+                -> (n' : Nat) -- The size of the pids provided
+                -> (pids : Vec Nat n') -- The set of pids provided
+                -> (UniqueVec Nat (plus n' n) (append [Nat] [n'] [n] pids pidSet))
+                -> (Vec {id : Nat | Channel A id} n') -- The set of channels
+                -> {id : Nat | Channel A id} -- The consumer Channel
+                -> (f : A -> A) -- The function
+                -> IO (Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))}))
+spawnWorkersFarm = \ [A] n pidSet n' pids pidPf chs consumerCh f.
+  let (consumerChid, consumerChannel) = consumerCh in
+  case pids of 
+    NilV -> 
+      returnIO 
+      [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+      (Just ((pidSet, Refl)))
+    ConsV [m] x xs ->
+      case pidPf of
+        UConsV m' y ys pf restPf ->
+          case chs of
+            ConsV [n''] curCh restChs ->
+              let (currChid, currChannel) = curCh in
+              bindEq
+              [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ m') | (y = newPid) * ((ConsV [m'] y ys : Vec Nat (Succ m')) = newPidSet) }})]
+              [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+              (spawnAndRun y m' ys pf (workerWrapper [A] currChid consumerChid currChannel consumerChannel f))
+              ( \ mres . case mres of
+                Nothing ->
+                  returnIO 
+                  [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+                  Nothing
+                Just res ->  
+                  bindEq
+                  [Maybe ({newPidSet : Vec Nat (plus (pred n') n) | newPidSet = ((append [Nat] [pred n'] [n] xs pidSet) : Vec Nat (plus (pred n') n))})]
+                  [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+                  (spawnWorkersFarm [A] n pidSet (pred n') xs restPf restChs consumerCh f)
+                  (\ mres . case mres of
+                    Nothing ->
+                      returnIO 
+                      [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+                      Nothing
+                    Just res ->
+                      let (newPidSet, pfNewPidSetCorrect) = res in
+                      returnIO 
+                      [Maybe ({newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))})]
+                      (Just (ConsV [(plus (pred n') n)] y newPidSet, subst Refl by pfNewPidSetCorrect))
+                  )
+              ) 
+
+createChannelsFarm : [A : Type]
+                  -> (m : Nat) -- The size of the chidSet
+                  -> (chidSet : Vec Nat m) -- The chidSet
+                  -> (m' : Nat) -- The size of the chids provided
+                  -> (chids : Vec Nat m') -- The set of chids provided
+                  -> (UniqueVec Nat (plus m' m) (append [Nat] [m'] [m] chids chidSet))
+                  -> IO (Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))}))
+createChannelsFarm = \ [A] m chidSet m' chids chidPf . 
+  case chids of
+    NilV -> 
+      returnIO 
+      [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+      (Just (NilV, (chidSet, Refl)))
+    ConsV [n] x xs ->
+      case chidPf of
+        UConsV n' y ys pf restPf ->
+          bindEq
+            [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n') | (y = chid) * (ConsV [n'] y ys : Vec Nat (Succ n')) = newIdSet}})]
+            [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+            -- Linking to create a channel
+            (link [A] y (n') ys pf)
+            (\ mres .  case mres of
+              Nothing ->
+                returnIO
+                [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                
+                Nothing
+              Just res -> 
+                let (resChid, rest1) = res in
+                let (ch, rest2) = rest1 in
+                let (newChidSet, pfs) = rest2 in
+                let (chidEqResChidPf, pfNewChidSetCorrect) = pfs in
+                -- Recursing
+                bindEq
+                [Maybe ((Vec {id : Nat | Channel A id} (pred m')) * {newChidSet : Vec Nat (plus (pred m') m) | newChidSet = ((append [Nat] [pred m'] [m] xs chidSet) : Vec Nat (plus (pred m') m))})]
+                [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                (createChannelsFarm [A] m chidSet (pred m') xs restPf)
+                (\ mres . case mres of
+                  Nothing ->
+                    returnIO
+                    [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                    
+                    Nothing
+                  Just res -> 
+                    let (chs, rest3) = res in
+                    let (returnedChidSet, pfReturnedChidSetCorrect) = rest3 in
+                    returnIO
+                    [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                    (Just (ConsV [n] (subst (y, ch) by chidEqResChidPf) chs, (ConsV [(plus n m)] (y) returnedChidSet, subst Refl by pfReturnedChidSetCorrect)))
+                )
+            )
+
+createFarm : [A : Type] -- The type for the function
+          -> (n : Nat) -- The size of the pidSet
+          -> (pidSet : Vec Nat n) -- The pidSet
+          -> (n' : Nat) -- The size of the pids provided
+          -> (pids : Vec Nat n') -- The set of pids provided
+          -> (UniqueVec Nat (plus n' n) (append [Nat] [n'] [n] pids pidSet))
+          -> (m : Nat) -- The size of the chidSet
+          -> (chidSet : Vec Nat m) -- The chidSet
+          -> (m' : Nat) -- The size of the chids provided
+          -> (chids : Vec Nat m') -- The set of chids provided
+          -> (UniqueVec Nat (plus m' m) (append [Nat] [m'] [m] chids chidSet))
+          -> (numWorkers : Nat) -- Number of workers
+          -> (Not (numWorkers = Zero)) -- Farm must have at least one worker
+          -> (n' = (Succ numWorkers)) -- Proof that the number of pids provided is correct
+          -> (m' = (Succ numWorkers)) -- Proof that the number of chids provided is correct
+          -> (f : A -> A) -- The function to farm
+          -> (List A) -- Input
+          -> IO (Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))}))
+createFarm = \ [A] n pidSet n' pids pidPf m chidSet m' chids chidPf numWorkers pfNotZ pfPidsNCorrect pfChidsMCorrect f input. 
+  -- Proof that n' = m'
+  let nDEqMd = (trans [Nat] [n'] [Succ numWorkers] [m'] pfPidsNCorrect (sym [Nat] [m'] [Succ numWorkers] pfChidsMCorrect )) in 
+  bindEq 
+  [Maybe ((Vec {id : Nat | Channel A id} m') * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+  [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+  (createChannelsFarm [A] m chidSet m' chids chidPf)
+  (\ mres . case mres of
+    Nothing ->
+      returnIO
+      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+      
+      Nothing
+    Just res -> 
+      let (chs, chidToReturn) = res in
+      case chs of -- Getting the consumer Channel
+        NilV -> 
+          returnIO
+          [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+          
+          Nothing
+        ConsV [m''] consumerCh otherChs ->
+          let (consumerChid, consumerChannel) = consumerCh in
+          case pids of -- Getting the producer pid
+            NilV -> 
+              returnIO
+              [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+              
+              Nothing
+            ConsV [n''] x xs -> 
+              case pidPf of
+                UConsV n''' producerPid restPids producerPidPf restPfs ->
+                  -- Proof that m'' = n''
+                  let pfmMDEqNDD =  succInjective [m''] [n''] (trans [Nat] [Succ m''] [n'] [Succ n''] (sym [Nat] [n'] [Succ m''] (trans [Nat] [n'] [m'] [Succ m''] nDEqMd (Refl : m' = Succ m''))) (Refl : n' = Succ n'')) in 
+                  bindEq 
+                  [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n''') | (producerPid = newPid) * ((ConsV [n'''] producerPid restPids : Vec Nat (Succ n''')) = newPidSet) }})]
+                  [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                  -- Spawning the producer
+                  (spawnAndRun producerPid n''' restPids producerPidPf (producerWrapper [A] consumerChid consumerChannel input))
+                  (\ mres . case mres of 
+                    Nothing ->
+                      returnIO
+                      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                      
+                      Nothing
+                    Just res ->
+                      bindEq 
+                      [Maybe ({newPidSet : Vec Nat (plus (pred n') n) | newPidSet = ((append [Nat] [pred n'] [n] xs pidSet) : Vec Nat (plus (pred n') n))})]
+                      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus n' n) | newPidSet = ((append [Nat] [n'] [n] pids pidSet) : Vec Nat (plus n' n))} * {newChidSet : Vec Nat (plus m' m) | newChidSet = ((append [Nat] [m'] [m] chids chidSet) : Vec Nat (plus m' m))})]
+                      (spawnWorkersFarm [A] n pidSet (pred n') xs restPfs (subst otherChs by pfmMDEqNDD) consumerCh f)
+                      (\ mres . 
+                        TRUSTME
+                      )
+                  )
+                  
+                  
+  )
+
+  
