@@ -105,8 +105,8 @@ predS = \a . case a of
     Zero -> Refl
     Succ a -> Refl
 
-succInjective : (left : Nat) -> (right : Nat) -> (p : Succ left = Succ right) -> (left = right)
-succInjective = \left right p .
+succInjective : [left : Nat] -> [right : Nat] -> (p : Succ left = Succ right) -> (left = right)
+succInjective = \[left] [right] p .
   f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
 
 decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
@@ -118,7 +118,7 @@ decEqNat = \a b . case a of
                 Zero -> No (Succ n = Zero) (negEqSym Nat Zero (Succ n) (ZnotS n))
                 Succ m -> case (decEqNat n m) of 
                            Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
-                           No prop p -> No (Succ n = Succ m) (\h . ((p : prop -> Void) ((succInjective n m h) : (n=m))) : ((Succ n) = (Succ m)) -> Void)
+                           No prop p -> No (Succ n = Succ m) (\h . ((p : prop -> Void) ((succInjective [n] [m] h) : (n=m))) : ((Succ n) = (Succ m)) -> Void)
 
 
 neitherHereNorThere : [x : Nat] -> [y : Nat] -> [xs : List Nat] 
