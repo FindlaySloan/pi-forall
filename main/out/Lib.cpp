@@ -71,7 +71,7 @@ std::optional<int> spawn(int pid, std::function<void(void)> f) {
 }
 
 template <type A>
-std::optional<LockingCQueue<A>> link(int chid) {
+std::optional<LockingCQueue<A>*> link(int chid) {
   
   LockingCQueue<A>* q = new LockingCQueue();
 
@@ -86,12 +86,27 @@ std::optional<LockingCQueue<A>> link(int chid) {
 ///////////////////////////////
 
 template <type A>
-void producerWrapper(LockingCQueue<A>* channel, std::vector<A> input) {
+void producerWrapper(LockingCQueue<std::optional<A>>* channel, std::vector<A> input) {
   for (auto i : input) {
     channel->enqueue(i);
   }
 
   channel->enqueue({});
+}
+
+template <type A, type B>
+void workerWrapper(LockingCQueue<std::optional<A>>* in, LockingCQueue<std::optional<B>>* out, std::function<B(A)> f) {
+  std::optional<A> input = in->dequeue();
+
+  while(input.has_value()) {
+    B output = f(input.value());
+
+    out->enqueue(output);
+
+    input = in->dequeue();
+  }
+
+  output->enqueue({});
 }
 
 /////////////////////
@@ -111,23 +126,28 @@ std::vector<C> createPipeline2<A, B, C>(
 ) {
 
   // Create Channel p -> s1
-  std::optional<LockingCQueue<A>> pToS1Ch link<A>(pToS1Chid);
+  std::optional<LockingCQueue<std::optional<A>>*> pToS1Ch link<A>(pToS1Chid);
 
   // Create Channel s1 -> s2
-  std::optional<LockingCQueue<A>> s1ToS2Ch link<B>(s1ToS2Chid);
+  std::optional<LockingCQueue<std::optional<B>>*> s1ToS2Ch link<B>(s1ToS2Chid);
 
   // Create Channel s2 -> this
-  std::optional<LockingCQueue<A>> s2ToCCh link<C>(s2toCChid);
+  std::optional<LockingCQueue<std::optional<C>>*> s2ToCCh link<C>(s2toCChid);
+
+  // NEED TO DO ERROR HANLDING
 
   // Run producer
-  std::optional<int> resPid = spawn(producerPid, [](){producerWrapper(pToS1Ch, input)});
+  std::optional<int> resPid = spawn(producerPid, [](){producerWrapper(pToS1Ch.value(), input)});
 
   // Run stage 1
-  
+  std::optional<int> resPid = spawn(stage1Pid, [](){workerWrapper(pToS1Ch.value(), s1ToS2Ch.value(), f)});
   
   // Run stage 2
+  std::optional<int> resPid = spawn(stage2Pid, [](){workerWrapper(s1ToS2Ch.value(), s2ToCCh.value(), g)});
 
+  // Run consumer, just read off s2ToCCh until empty
+  vector<C> toReturn;
 
-  // Run consumer
+  
 
 }
