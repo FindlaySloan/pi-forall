@@ -2,10 +2,11 @@
 #include <functional>
 #include <thread>
 #include <optional>
+#include <iostream>
 #include <system_error>
 #include <map>
-#include "LockingCQueue"
-#include "Semaphore"
+#include "LockingCQueue.hpp"
+#include "Semaphore.hpp"
 
 //////////////////////////////////////
 // GLOBAL STATE AND HELPER FUNCTION //
@@ -45,7 +46,8 @@ void* getChannel(int chid) {
   return channels[chid];
 }
 
-void addChannel(int chid, LockingCQueue* queue) {
+template <typename A>
+void addChannel(int chid, LockingCQueue<A>* queue) {
   // Aquireing the lock
   std::lock_guard<std::mutex> lock(channelMutex);
 
@@ -70,10 +72,10 @@ std::optional<int> spawn(int pid, std::function<void(void)> f) {
   return pid;
 }
 
-template <type A>
+template <typename A>
 std::optional<LockingCQueue<A>*> link(int chid) {
   
-  LockingCQueue<A>* q = new LockingCQueue();
+  LockingCQueue<A>* q = new LockingCQueue<A>();
 
   addChannel(chid, q);
 
@@ -85,7 +87,7 @@ std::optional<LockingCQueue<A>*> link(int chid) {
 // PIPELINE HELPER FUNCTIONS //
 ///////////////////////////////
 
-template <type A>
+template <typename A>
 void producerWrapper(LockingCQueue<std::optional<A>>* channel, std::vector<A> input) {
   for (auto i : input) {
     channel->enqueue(i);
@@ -94,7 +96,7 @@ void producerWrapper(LockingCQueue<std::optional<A>>* channel, std::vector<A> in
   channel->enqueue({});
 }
 
-template <type A, type B>
+template <typename A, typename B>
 void workerWrapper(LockingCQueue<std::optional<A>>* in, LockingCQueue<std::optional<B>>* out, std::function<B(A)> f) {
   std::optional<A> input = in->dequeue();
 
@@ -106,14 +108,14 @@ void workerWrapper(LockingCQueue<std::optional<A>>* in, LockingCQueue<std::optio
     input = in->dequeue();
   }
 
-  output->enqueue({});
+  out->enqueue({});
 }
 
 /////////////////////
 // CREATE PIPELINE //
 /////////////////////
-template <type A, type B, type C>
-std::vector<C> createPipeline2<A, B, C>(
+template <typename A, typename B, typename C>
+std::vector<C> createPipeline2(
   int producerPid,
   int stage1Pid,
   int stage2Pid,
@@ -126,28 +128,46 @@ std::vector<C> createPipeline2<A, B, C>(
 ) {
 
   // Create Channel p -> s1
-  std::optional<LockingCQueue<std::optional<A>>*> pToS1Ch link<A>(pToS1Chid);
+  std::optional<LockingCQueue<std::optional<A>>*> pToS1Ch = link<std::optional<A>>(pToS1Chid);
 
   // Create Channel s1 -> s2
-  std::optional<LockingCQueue<std::optional<B>>*> s1ToS2Ch link<B>(s1ToS2Chid);
+  std::optional<LockingCQueue<std::optional<B>>*> s1ToS2Ch = link<std::optional<B>>(s1ToS2Chid);
 
   // Create Channel s2 -> this
-  std::optional<LockingCQueue<std::optional<C>>*> s2ToCCh link<C>(s2toCChid);
+  std::optional<LockingCQueue<std::optional<C>>*> s2ToCCh = link<std::optional<C>>(s2toCChid);
 
   // NEED TO DO ERROR HANLDING
 
   // Run producer
-  std::optional<int> resPid = spawn(producerPid, [](){producerWrapper(pToS1Ch.value(), input)});
+  std::optional<int> resPid = spawn(producerPid, [pToS1Ch, input](){producerWrapper(pToS1Ch.value(), input);});
 
   // Run stage 1
-  std::optional<int> resPid = spawn(stage1Pid, [](){workerWrapper(pToS1Ch.value(), s1ToS2Ch.value(), f)});
+  std::optional<int> resPid1 = spawn(stage1Pid, [pToS1Ch, s1ToS2Ch, f](){workerWrapper(pToS1Ch.value(), s1ToS2Ch.value(), f);});
   
   // Run stage 2
-  std::optional<int> resPid = spawn(stage2Pid, [](){workerWrapper(s1ToS2Ch.value(), s2ToCCh.value(), g)});
+  std::optional<int> resPid2 = spawn(stage2Pid, [s1ToS2Ch, s2ToCCh, g](){workerWrapper(s1ToS2Ch.value(), s2ToCCh.value(), g);});
 
   // Run consumer, just read off s2ToCCh until empty
-  vector<C> toReturn;
+  std::vector<C> toReturn;
 
-  
+  std::optional<C> inputt = s2ToCCh.value()->dequeue();
 
+  // Looping until there is an emptyer optional is recieved
+  while(inputt.has_value()) {
+      // Can run the consumer function
+      toReturn.push_back(inputt.value());
+
+      inputt = s2ToCCh.value()->dequeue();
+  }
+
+  for (auto i : toReturn) {
+    std::cout << i << std::endl;
+  }
+
+  return toReturn;
+
+}
+
+int main() {
+  std::vector<int> i = createPipeline2<int, int, int>(1, 2, 3, 1, 2, 3, {1, 2, 3, 4, 5}, [](int i){return i+2;}, [](int i){return i+5;});
 }
