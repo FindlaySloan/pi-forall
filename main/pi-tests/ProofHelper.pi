@@ -3,6 +3,10 @@ module ProofHelper where
 import ProofPrelude
 import Vec
 
+trans : [A:Type] -> [x:A] -> [y:A] -> [z:A] -> (x = y) -> (y = z) -> (x = z)
+trans = \ [A] [x] [y] [z]  pf1 pf2 . 
+  subst pf1 by pf2 
+
 data ElemVec (A:Type) (n:Nat) (x:A) (v:Vec A n) : Type where
   HereV  of [m:Nat] (xs : Vec A m) [n = Succ m] [v = ConsV [m] x xs]
   ThereV of [m:Nat] (xs : Vec A m) (y:A) (ElemVec A m x xs) [n = Succ m] [v = ConsV [m] y xs]
