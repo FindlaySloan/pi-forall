@@ -13,11 +13,11 @@
 //////////////////////////////////////
 
 // map of threads
-std::map<int, std::thread*> pids;
+std::map<int, std::thread*> pidsMap;
 std::mutex pidMutex;
 
 // map of channels
-std::map<int, void*> channels;
+std::map<int, void*> channelsMap;
 std::mutex channelMutex;
 
 // Helper functions for pids
@@ -26,7 +26,7 @@ std::thread* getThread(int pid) {
   std::lock_guard<std::mutex> lock(pidMutex);
 
   // return the information
-  return pids[pid];
+  return pidsMap[pid];
 }
 
 void addThread(int pid, std::thread* t) {
@@ -34,7 +34,7 @@ void addThread(int pid, std::thread* t) {
   std::lock_guard<std::mutex> lock(pidMutex);
 
   // Adding the thread, will never overwrite
-  pids[pid] = t;
+  pidsMap[pid] = t;
 }
 
 // Helper functions for channels
@@ -43,7 +43,7 @@ void* getChannel(int chid) {
   std::lock_guard<std::mutex> lock(channelMutex);
 
   //  returning the channel
-  return channels[chid];
+  return channelsMap[chid];
 }
 
 template <typename A>
@@ -52,7 +52,7 @@ void addChannel(int chid, LockingCQueue<A>* queue) {
   std::lock_guard<std::mutex> lock(channelMutex);
 
   // adding the channel
-  channels[chid] = queue;
+  channelsMap[chid] = queue;
 }
 
 ////////////////////////////
@@ -96,15 +96,37 @@ void producerWrapper(LockingCQueue<std::optional<A>>* channel, std::vector<A> in
   channel->enqueue({});
 }
 
+template <typename A>
+void farmProducerWrapper(const std::vector<LockingCQueue<std::optional<A>>*> channels, std::vector<A> input) {
+  int ch = 0;
+
+  for (A i : input) {
+    std::cout << "producer sent " << i << " along channel " << ch <<std::endl;
+    channels[ch]->enqueue(i);
+    // Increment the channel
+    ch++;
+
+    if (ch >= channels.size()) {
+      std::cout << "reset at " << i << " " << ch << std::endl;
+      ch = 0;
+    }
+  }
+
+  for(LockingCQueue<std::optional<A>>* c : channels) {
+    c->enqueue({});
+  }
+}
+
 template <typename A, typename B>
 void workerWrapper(LockingCQueue<std::optional<A>>* in, LockingCQueue<std::optional<B>>* out, std::function<B(A)> f) {
   std::optional<A> input = in->dequeue();
 
   while(input.has_value()) {
+    std::cout << "recieved " << input.value() << std::endl;
     B output = f(input.value());
 
     out->enqueue(output);
-
+    std::cout << "sent " << input.value() << " along " << out << std::endl;
     input = in->dequeue();
   }
 
@@ -168,6 +190,124 @@ std::vector<C> createPipeline2(
 
 }
 
-int main() {
-  std::vector<int> i = createPipeline2<int, int, int>(1, 2, 3, 1, 2, 3, {1, 2, 3, 4, 5}, [](int i){return i+2;}, [](int i){return i+5;});
+template <typename A>
+std::optional<std::vector<int>> spawnWorkersFarm(std::vector<int> pids, std::vector<LockingCQueue<std::optional<A>>*> chs, LockingCQueue<std::optional<A>>* consumerChannel, std::function<A(A)> f) {
+  std::vector<int> toReturn;
+
+  for(int i = 0; i < pids.size(); i++) {
+    std::optional<int> resPid = spawn(pids[i], [i, chs, consumerChannel, f](){workerWrapper(chs[i], consumerChannel, f);});
+    if (!resPid.has_value()) {
+      return {};
+    }
+
+    toReturn.push_back(resPid.value());
+  }
+
+  return toReturn;
 }
+
+template <typename A>
+std::optional<std::vector<LockingCQueue<std::optional<A>>*>> createChannelsFarm(std::vector<int> chids) {
+  std::vector<LockingCQueue<std::optional<A>>*> toReturn;
+
+  for (int chid : chids) {
+    std::optional<LockingCQueue<std::optional<A>>*> ch = link<std::optional<A>>(chid);
+
+    if (!ch.has_value()) {
+      return {};
+    }
+
+    toReturn.push_back(ch.value());
+  }
+
+  return toReturn;
+}
+
+template <typename A>
+std::vector<A> createFarm(
+  std::vector<int> pids, 
+  std::vector<int> chids,
+  int numWorkers,
+  std::function<A(A)> f,
+  std::vector<A> input
+) {
+  // Create all the channels
+  std::vector<LockingCQueue<std::optional<A>>*> chs = createChannelsFarm<A>(chids).value();
+
+  // Getting the consumer channel
+  LockingCQueue<std::optional<A>>* consumerChannel = chs[0];
+
+  // Setting the chs to now be the rest of the list
+  chs.erase(chs.begin());
+
+  // Getting the producer pid
+  int producerPid = pids[0];
+
+  // Getting the workerPids, just rest of pids
+  pids.erase(pids.begin());
+
+  // // Spawn the producer pid,
+  std::optional<int> resProducerPid = spawn(producerPid, [chs, input](){farmProducerWrapper<A>(chs, input);});
+
+
+  // // Spawn all the workers
+  std::optional<std::vector<int>> resWorkerPids = spawnWorkersFarm<A>(pids, chs, consumerChannel, f);
+  
+
+  
+  pidsMap[1]->join();
+  pidsMap[2]->join();
+  pidsMap[3]->join();
+
+  // // Consumer the result
+  int numFinished = 0;
+
+  // // The return list
+  std::vector<A> toReturn;
+  
+  // // The ouput
+  std::optional<A> output = consumerChannel->dequeue();
+  
+  while(numFinished < numWorkers) {
+    if (!output.has_value()) {
+      numFinished++;
+
+      if (numFinished != numWorkers) {
+        output = consumerChannel->dequeue();
+      }
+      continue;
+    }
+
+    toReturn.push_back(output.value());
+    // std::cout << output.value() << std::endl;
+    output = consumerChannel->dequeue();
+  }
+
+  
+  for (auto i : toReturn) {
+    std::cout << i << std::endl;
+  }
+
+
+  std::cout << "size " << toReturn.size() << std::endl;
+  return toReturn;
+  
+  // return {};
+}
+
+int fib(int x) {
+   if((x==1)||(x==0)) {
+      return(x);
+   }else {
+      return(fib(x-1)+fib(x-2));
+   }
+}
+
+int main() {
+  // std::vector<int> i = createPipeline2<int, int, int>(1, 2, 3, 1, 2, 3, {1, 2, 3, 4, 5}, [](int i){return i+2;}, [](int i){return i+5;});
+  std::vector<int> i = createFarm<int>({1, 2, 3, 4, 5, 6}, {1, 2, 3, 4, 5, 6}, 5, fib, {42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42});
+  // for (int i = 0; i < 13; i++) {
+  //   std::cout << fib(42) << std::endl;
+  // }
+}
+
