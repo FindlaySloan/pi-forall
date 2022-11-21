@@ -34,7 +34,7 @@ generateInterDef (UNDEF) = return ""
 -- | Generates the C code for the function definition intermediate representation
 generateInterDefForFunctionDef :: InterDef -> State GeneratorState String
 generateInterDefForFunctionDef f@(FunctionDef funcName tempArgs args returnType def) =
-  return $ (genTemplate tempArgs) ++ "extern " ++ def ++ " " ++ funcName ++ ";"
+  return $ "" --(genTemplate tempArgs) ++ "extern " ++ def ++ " " ++ funcName ++ ";"
   where
     genTemplate [] = ""
     genTemplate args = "template <" ++ (concat $ intersperse "," (map (\s -> "class " ++ s) args)) ++ "> "

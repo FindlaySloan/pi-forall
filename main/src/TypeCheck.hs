@@ -246,19 +246,19 @@ tcTerm t@(Case scrut alts) (Just ty) = do
   sty <- inferType scrut
   scrut' <- Equal.whnf scrut
   (c, args) <- Equal.ensureTCon (fst sty)
-  let checkAlt (Match bnd) = do
-        (pat, body) <- Unbound.unbind bnd
-        -- add variables from pattern to context
-        -- could fail if branch is in-accessible
-        decls <- declarePat pat Rel (TCon c args)
-        -- add defs to the contents from scrut = pat
-        -- could fail if branch is in-accessible
-        decls' <- Equal.unify [] scrut' (pat2Term pat)
-        y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
-        return y
-        {- STUBWITH -}
-{- SOLN DATA -}
-        return ()
+--   let checkAlt (Match bnd) = do
+--         (pat, body) <- Unbound.unbind bnd
+--         -- add variables from pattern to context
+--         -- could fail if branch is in-accessible
+--         decls <- declarePat pat Rel (TCon c args)
+--         -- add defs to the contents from scrut = pat
+--         -- could fail if branch is in-accessible
+--         decls' <- Equal.unify [] scrut' (pat2Term pat)
+--         y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
+--         return y
+--         {- STUBWITH -}
+-- {- SOLN DATA -}
+--         return ()
   let pats = map (\(Match bnd) -> fst (unsafeUnbind bnd)) alts
   x <- mapM (\(Match bnd) -> do
                                (pat, body) <- Unbound.unbind bnd
@@ -297,8 +297,8 @@ tcTerm t@(Subst a b) (Just ty) = do
   edecl <- def m n
   -- if proof is a variable, add a definition to the context
   pdecl <- def b Refl
-  _ <- Env.extendCtxs (edecl ++ pdecl) $ checkType a ty
-  return (ty, [ty])
+  aTy <- Env.extendCtxs (edecl ++ pdecl) $ checkTypeRet a ty
+  return (ty, [fst aTy])
 tcTerm t@(Contra p) (Just ty) = do
   ty' <- inferType p
   (a, b) <- Equal.ensureTyEq (fst ty')
