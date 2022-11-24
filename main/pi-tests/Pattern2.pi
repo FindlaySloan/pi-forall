@@ -8,8 +8,10 @@ import Nat
 import Vec
 import IO
 
+
+
 data Farm (A : Type) (n : Nat) : Type where
-  MkFarm of (B : Type) (m : Nat) (f : B -> B) [m = n] [B = A]
+  MkFarm of (m : Nat) (f : A -> A) [m = n]
 
 producerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> List A -> IO Unit
 producerWrapper = \ [A] id ch list . 
@@ -234,7 +236,7 @@ createFarm = \ A n pidSet n' pids pidPf m chidSet m' chids chidPf numWorkers pfN
                             (Just (
                               (resultantList),  
                                 (
-                                (MkFarm A numWorkers f),
+                                (MkFarm numWorkers f),
                                 (((
                                   ConsV [plus (pred n') n] producerPid workersPidSet,
                                   consVInjLem [plus (pred n') n] [producerPid] [workersPidSet] [producerPid] [append [Nat] [pred n'] [n] xs pidSet] Refl workerPidSetPf

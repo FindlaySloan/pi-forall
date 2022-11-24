@@ -41,7 +41,9 @@ checkType tm ty = {- SOLN EQUAL -} do
 -- | Check that a given term has the expected type and return the type
 checkTypeRet :: Term -> Type -> TcMonad (Type, [Type])
 checkTypeRet tm (Pos _ ty) = checkTypeRet tm ty  -- ignore source positions/annotations
-checkTypeRet tm (Ann ty _) = checkTypeRet tm ty
+checkTypeRet tm (Ann ty at) = do
+  (newTm, newTys) <- checkTypeRet tm ty
+  return (newTm, at : newTys)
 checkTypeRet tm ty = {- SOLN EQUAL -} do
   nf <- Equal.whnf ty
   tcTerm tm (Just nf)
@@ -79,6 +81,12 @@ tcTerm (Lam {- SOLN EP -} ep1 {- STUBWITH -} bnd) (Just (Pi {- SOLN EP -} ep2 {-
                                  DS "but found", DD ep1, DS "instead."] {- STUBWITH -}
   -- check the type of the body of the lambda expression
   (tyB2, tyBs) <- Env.extendCtx {- SOLN EP -} (TypeSig (Sig x ep1 tyA)){- STUBWITH (mkSig x tyA) -} (checkTypeRet body tyB)
+  -- liftIO $ putStrLn $ show "Lambda*********"
+  -- liftIO $ putStrLn $ show $ (Pi {- SOLN EP -} ep1{- STUBWITH -} tyA bnd2)
+  -- liftIO $ putStrLn $ show $ body
+  -- liftIO $ putStrLn $ show $ tyB
+  -- liftIO $ putStrLn $ show $ tyBs
+  -- liftIO $ putStrLn $ show "***************"
   return ((Pi {- SOLN EP -} ep1{- STUBWITH -} tyA bnd2), [(Pi {- SOLN EP -} ep1{- STUBWITH -} tyA bnd2)] ++ tyBs)
 tcTerm (Lam {- SOLN EP -} _ {- STUBWITH -}_) (Just nf) =
   Env.err [DS "Lambda expression should have a function type, not", DD nf]
@@ -102,7 +110,13 @@ tcTerm (App t1 t2) Nothing = do
   -- if the argument is Irrelevant, resurrect the context
   x <-(if ep1 == Irr then Env.extendCtx (Demote Rel) else id) $
     checkTypeRet (unArg t2) tyA
---  liftIO $ putStrLn $ show $ x
+  -- liftIO $ putStrLn $ show "App*********"
+  -- liftIO $ putStrLn $ show $ Unbound.instantiate bnd [unArg t2]
+  -- liftIO $ putStrLn $ show $ (snd ty1)
+  -- liftIO $ putStrLn $ show $ (t2)
+  -- liftIO $ putStrLn $ show $ (fst x)
+  -- liftIO $ putStrLn $ show $ (snd x)
+  -- liftIO $ putStrLn $ show $ (tyA)
   return (Unbound.instantiate bnd [unArg t2], [Unbound.instantiate bnd [unArg t2]] ++ (snd ty1) ++ (snd x))
   {- STUBWITH 
 
@@ -113,8 +127,8 @@ tcTerm (App t1 t2) Nothing = do
 -- i-ann
 tcTerm (Ann tm ty) Nothing = do
   tcType ty
-  checkType tm ty
-  return (ty, [ty])
+  x <- checkTypeRet tm ty
+  return (ty, snd x)
   
 -- practicalities
 -- remember the current position in the type checking monad
@@ -269,14 +283,25 @@ tcTerm t@(Case scrut alts) (Just ty) = do
                                -- could fail if branch is in-accessible
                                decls' <- Equal.unify [] scrut' (pat2Term pat)
                                y <- Env.extendCtxs (decls ++ decls') $ checkTypeRet body ty
+                               gg <- Env.extendCtxs (decls ++ decls') $ tcTerm body (Just ty)
+                              --  liftIO $ putStrLn $ show "INNER***************"
+                              --  liftIO $ putStrLn $ show $ body
+                              --  liftIO $ putStrLn $ show $ gg
                                return y) alts
+
+  -- liftIO $ putStrLn $ show "Case*********"
+  -- liftIO $ putStrLn $ show $ (snd sty)
+  -- liftIO $ putStrLn $ show $ (concat $ map (snd) x)
+  -- liftIO $ putStrLn $ show $ (map (fst) x)
+  -- liftIO $ putStrLn $ show $ tyBs
+  -- liftIO $ putStrLn $ show "***************"
   -- unsafeCoerce $ unsafePerformIO $ putStrLn ((show scrut) ++ "\n" ++ (show scrut') ++ "\n"++ (show pats) ++ "\n")
   case scrut' of
     DCon dcName _ -> case pats of
                   (PatCon pcName _:[])  -> return ()
                   _                     -> exhaustivityCheck scrut' (fst sty) pats
     _         -> exhaustivityCheck scrut' (fst sty) pats
-  return (ty, [(fst sty)] ++  (concat $ map (snd) x))
+  return (ty, (snd sty) ++  (concat $ map (snd) x))
 {- STUBWITH -}
 {- SOLN EQUAL -}
 tcTerm (TyEq a b) Nothing = do
@@ -298,7 +323,14 @@ tcTerm t@(Subst a b) (Just ty) = do
   -- if proof is a variable, add a definition to the context
   pdecl <- def b Refl
   aTy <- Env.extendCtxs (edecl ++ pdecl) $ checkTypeRet a ty
-  return (ty, [fst aTy])
+  -- aTY <- tcTerm a (Just $ fst aTy)
+  x <- case fst aTy of
+    Refl -> return (ty, snd aTy)
+    _ -> return (ty, snd aTy)
+  return x
+  -- liftIO $ putStrLn $ "SUBST***************"
+  -- liftIO $ putStrLn $ show aTy
+  -- return (ty, [fst aTy])
 tcTerm t@(Contra p) (Just ty) = do
   ty' <- inferType p
   (a, b) <- Equal.ensureTyEq (fst ty')

@@ -1,55 +1,650 @@
 module NewProofs where
 
+-- Data types
+
 data Maybe (A : Type) : Type where
   Nothing
   Just of (A)
 
--- data Void : Type where {}
+data Vec (A : Type) (n : Nat) : Type where
+  NilV  of                       [n = Zero] 
+  ConsV of [m:Nat] (A) (Vec A m) [n = Succ m]
 
--- data Dec (prop : Type) : Type where 
---   Yes of (prf : prop)
---   No  of (cont : prop -> Void)
+head : [A :Type] -> [n:Nat] -> Vec A (Succ n) -> A
+head = \ [A][n] x.  case x of 
+     ConsV [m] y ys -> y
+	  -- NilV case is impossible
 
--- f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
--- f_equal = \[A][B][f][x][y] pf . 
---   subst Refl by pf
+tail : [A :Type] -> [n:Nat] -> Vec A (Succ n) -> Vec A n
+tail = \ [A][n] x.  case x of 
+     -- NilV case impossible
+     ConsV [m] y ys -> ys
 
--- ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
--- ZnotS = \n r . contra r
+-- Void type
 
--- sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
--- sym = \ [A] [x] [y] pf .
---   subst Refl by pf 
+data Void : Type where {}
 
--- negEqSym : [t : Type]-> [a : t]-> [b : t] -> (a = b -> Void) -> (b = a -> Void)
--- negEqSym = \[t] [a] [b] p h . p (sym [t] [b] [a] h)
+-- Adjusted Dec Type
 
--- pred : Nat -> Nat
--- pred = \n . case n of 
---     Zero -> Zero
---     Succ m -> m
+data Dec (prop : Type) : Type where 
+  Yes of (prf : prop)
+  No  of (cont : prop -> Void)
 
--- succInjective : [left : Nat] -> [right : Nat] -> (p : Succ left = Succ right) -> (left = right)
--- succInjective = \[left] [right] p .
---   f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
+-- Adapted from proof prelude (Chris's work)
+
+f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
+f_equal = \[A][B][f][x][y] pf . 
+  subst Refl by pf
+
+ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
+ZnotS = \n r . contra r
+
+sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
+sym = \ [A] [x] [y] pf .
+  subst Refl by pf 
+
+negEqSym : [t : Type]-> [a : t]-> [b : t] -> (a = b -> Void) -> (b = a -> Void)
+negEqSym = \[t] [a] [b] p h . p (sym [t] [b] [a] h)
+
+pred : Nat -> Nat
+pred = \n . case n of 
+    Zero -> Zero
+    Succ m -> m
+
+succInjective : [left : Nat] -> [right : Nat] -> (p : Succ left = Succ right) -> (left = right)
+succInjective = \[left] [right] p .
+  f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
   
 
--- decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
--- decEqNat = \a b . case a of 
---      Zero -> case b of 
---                Zero -> Yes Refl 
---                Succ n -> No (ZnotS n)
---      Succ n -> case b of 
---                 Zero -> No (negEqSym [Nat] [Zero] [Succ n] (ZnotS n))
---                 Succ m -> case (decEqNat n m) of 
---                             Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
---                             No p -> No (\h . p (succInjective [n] [m] h))
+decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
+decEqNat = \a b . case a of 
+     Zero -> case b of 
+               Zero -> Yes Refl 
+               Succ n -> No (ZnotS n)
+     Succ n -> case b of 
+                Zero -> No (negEqSym [Nat] [Zero] [Succ n] (ZnotS n))
+                Succ m -> case (decEqNat n m) of 
+                            Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
+                            No p -> No (\h . p (succInjective [n] [m] h))
 
-f : Maybe Bool -> Maybe Bool -> Maybe Bool
-f = \ a b . case a of
-  Nothing -> 
+data Elem (a : Type) (x : a) (B : List a) : Type where
+     Here of (x : a) (xs : List a) [B=Cons x xs]
+     There of (y : a) (x : a) (xs : List a) (later : Elem a x xs) [B=Cons y xs]
+
+neitherHereNorThere : [x : Nat] -> [y : Nat] -> [xs : List Nat] 
+                   -> ((x = y) -> Void) -> ((Elem Nat x xs) -> Void) -> ((Elem Nat x (Cons y xs)) -> Void)
+neitherHereNorThere = \[x] [y] [xs] xneqy xninxs p . case p of 
+    Here a as -> xneqy Refl
+    There b a as prf -> xninxs prf
+
+falseElem1 : [x : Nat] -> (p : Elem Nat x Nil) -> Void
+falseElem1 = \[x] p . case p of {} 
+
+
+isElem : (x : Nat) -> (xs : List Nat) -> Dec (Elem Nat x xs)
+isElem = \x xss . case xss of -- Note had to change
+    Nil -> No (falseElem1 [x])
+    Cons y xs -> 
+      case (decEqNat x y) of
+         Yes p -> Yes (subst (Here x xs) by p)
+         No xneqy -> 
+          case (isElem x xs) of
+             Yes xinxs -> Yes (There y x xs xinxs)
+             No  xninxs -> No (neitherHereNorThere [x] [y] [xs] xneqy xninxs)
+
+-- My proofs
+
+plus : Nat -> Nat -> Nat
+plus = \ n m .
+  case n of
+    Zero -> m
+    Succ pred -> Succ (plus pred m)
+
+append : [A :Type] ->[m:Nat] -> [n:Nat] -> Vec A m -> Vec A n -> Vec A (plus m n)
+append = \[A] [m] [n] v1 ys . case v1 of 
+     ConsV [m0] x xs -> ConsV [plus m0 n] x (append [A] [m0][n] xs ys)
+     NilV -> ys
+
+
+
+trans : [A:Type] -> [x:A] -> [y:A] -> [z:A] -> (x = y) -> (y = z) -> (x = z)
+trans = \ [A] [x] [y] [z]  pf1 pf2 . 
+  subst pf1 by pf2 
+
+data ElemVec (A:Type) (n:Nat) (x:A) (v:Vec A n) : Type where
+  HereV  of [m:Nat] (xs : Vec A m) [n = Succ m] [v = ConsV [m] x xs]
+  ThereV of [m:Nat] (xs : Vec A m) (y:A) (ElemVec A m x xs) [n = Succ m] [v = ConsV [m] y xs]
+
+xNotInNilV : [A : Type] -> [n : Nat] -> [x : A] -> (p : ElemVec A n x NilV) -> Void
+xNotInNilV = \ [A] [n] [x] p . case p of {} 
+
+neitherHereNorThereVec : [n : Nat] -> [x : Nat] -> [y : Nat] -> [xs : Vec Nat n] 
+                   -> ((x = y) -> Void) -> ((ElemVec Nat n x xs) -> Void) -> ((ElemVec Nat (Succ n) x (ConsV [n] y xs)) -> Void)
+neitherHereNorThereVec = \[n] [x] [y] [xs] xneqy xninxs p . case p of 
+    HereV [m] as -> xneqy Refl
+    ThereV [m] as b prf -> xninxs prf
+
+isElemVec : [n : Nat] -> (x : Nat) -> (xs : Vec Nat n) -> Dec (ElemVec Nat n x xs)
+isElemVec = \ [n] x xs . case xs of
+  NilV          -> No (xNotInNilV [Nat] [n] [x])
+  ConsV [m] y ys -> 
+    case (decEqNat x y) of
+      Yes pf        -> Yes (subst (HereV [m] ys) by pf)
+      No xneqyPf  -> 
+        case (isElemVec [m] x ys) of
+          Yes pf          -> Yes (ThereV [m] ys x pf)
+          No xninysPf  -> No (neitherHereNorThereVec [m] [x] [y] [ys] xneqyPf xninysPf)
+
+
+data Disjoint (A : Type) (a : List A) (b : List A) : Type where
+     DNil of [a = Nil]
+     DCons of (x : A) (xs : List A) (pfForx : (Elem A x b) -> Void) (Disjoint A xs b) [a = Cons x xs]
+
+xNotInNil : [A : Type] -> [x : A] -> (p : Elem A x Nil) -> Void
+xNotInNil = \ [A] [x] p . case p of {} 
+
+lemma_y_empty_disjoint : [A : Type] -> (a : List A) -> [b : List A] -> (b = Nil) -> Disjoint A a b
+lemma_y_empty_disjoint = \ [A] a [b] pf . case a of
+  Nil       -> DNil
+  Cons x xs -> DCons x xs (subst xNotInNil [A] [x] by pf) (lemma_y_empty_disjoint [A] xs [b] pf)
+
+lemma_x_in_b : [A : Type] -> [x : A] -> [a : List A] -> [b : List A] -> [Elem A x (Cons x a)] -> (Elem A x b) -> ((Disjoint A (Cons x a) b) -> Void)
+lemma_x_in_b = \ [A] [x] [a] [b] [xInA] xInB pf . case pf of 
+    DCons i is pfFori others -> pfFori xInB
+
+lemma_xs_in_b : [A : Type] -> [x : A] -> [xs : List A] -> [b : List A] -> ((Disjoint A xs b) -> Void) -> ((Disjoint A (Cons x xs) b) -> Void)
+lemma_xs_in_b = \ [A] [x] [xs] [b] pf p. case p of 
+  DCons i is pfFori others  -> pf others
+
+decDisjointLists : (a : List Nat) -> (b : List Nat) -> Dec (Disjoint Nat a b)
+decDisjointLists = \ a b . case a of
+  Nil       -> Yes (DNil)
+  Cons x xs -> 
     case b of
-      Nothing -> Nothing
-      Just g -> Nothing
-  Just g -> 
-    TRUSTME
+      Nil       -> Yes (lemma_y_empty_disjoint [Nat] a [b] (Refl))
+      Cons y ys -> 
+        case (decDisjointLists xs b) of
+          Yes pf    -> 
+            case (isElem x b) of
+              Yes elemPf  -> No (lemma_x_in_b [Nat] [x] [xs] [b] [(Here x xs)] elemPf)
+              No p   -> Yes (DCons x xs (p) pf)
+          No p -> No (lemma_xs_in_b [Nat] [x] [xs] [b] p)
+
+data DisjointVec (A : Type) (n : Nat) (a : Vec A n) (m : Nat) (b : Vec A m) : Type where
+  DNilV of [n = 0] [a = NilV]
+  DConsV of [n1 : Nat] (x : A) (xs : Vec A n1) (pfForx : (ElemVec A m x b) -> Void)  (DisjointVec A n1 xs m b) [n = Succ n1] [a = ConsV [n1] x xs]
+
+lemma_y_empty_disjoint_vec : [A : Type] -> [n : Nat] -> (a : Vec A n) -> [b : Vec A Zero] -> (b = NilV) -> DisjointVec A n a Zero b
+lemma_y_empty_disjoint_vec = \ [A] [n] a [b] pf . case a of
+  NilV       -> DNilV
+  ConsV [m] x xs -> DConsV [m] x xs (subst xNotInNilV [A] [0] [x] by pf) (lemma_y_empty_disjoint_vec [A] [m] xs [b] pf)
+
+lemma_x_in_b_vec : [A : Type] -> [x : A] -> [n : Nat] -> [a : Vec A n] -> [m : Nat] ->[b : Vec A m]
+                -> [ElemVec A (Succ n) x (ConsV [n] x a)] -> (ElemVec A m x b) -> ((DisjointVec A (Succ n) (ConsV [n] x a) m b) -> Void)
+lemma_x_in_b_vec = \ [A] [x] [n] [a] [m] [b] [xInA] xInB pf . case pf of 
+    DConsV [n1] y ys pfFory others -> pfFory xInB
+
+lemma_xs_in_b_vec : [A : Type] -> [x : A] -> [n : Nat] -> [xs : Vec A n] -> [m : Nat] -> [b : Vec A m] 
+             -> ((DisjointVec A n xs m b) -> Void) -> ((DisjointVec A (Succ n) (ConsV [n] x xs) m b) -> Void)
+lemma_xs_in_b_vec = \ [A] [x] [n] [xs] [m] [b] pf p. case p of 
+  DConsV [n1] i is pfFori others  -> pf others
+
+
+decDisjointVecs : [n : Nat] -> (a : Vec Nat n) -> [m : Nat] -> (b : Vec Nat m) -> Dec (DisjointVec Nat n a m b)
+decDisjointVecs = \ [n] a [m] b . case a of
+  NilV       -> Yes (DNilV)
+  ConsV [n1] x xs -> 
+    case b of
+      NilV       -> Yes (lemma_y_empty_disjoint_vec [Nat] [n] a [b] (Refl))
+      ConsV [m1] y ys -> 
+        case (decDisjointVecs [n1] xs [m] b) of
+          Yes pf    -> 
+            case (isElemVec [m] x b) of
+              Yes elemPf  -> No (lemma_x_in_b_vec [Nat] [x] [n1] [xs] [m] [b] [(HereV [n1] xs)] elemPf)
+              No p   -> Yes (DConsV [n1] x xs (p) pf)
+          No p -> No (lemma_xs_in_b_vec [Nat] [x] [n1] [xs] [m] [b] p)
+
+consVInjLem : [n : Nat] -> [x : Nat] -> [xs : Vec Nat n] -> [y : Nat] -> [ys : Vec Nat n] 
+           -> (x = y) -> (xs = ys) -> (ConsV [n] x xs : Vec Nat (Succ n)) = (ConsV [n] y ys : Vec Nat (Succ n))
+consVInjLem = \[n] [x] [xs] [y] [ys] prf1 prf2 . 
+  subst (f_equal [Vec Nat n] [Vec Nat n] [\a . ConsV [n] x a] [xs] [ys] prf2) by prf1
+
+consVInjective : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> [y : A] -> [ys : Vec A n] 
+             -> (x = y) 
+             -> (p : (ConsV [n] x xs : Vec A (Succ n)) = (ConsV [n] y ys : Vec A (Succ n))) 
+             -> xs = ys
+consVInjective = \[A] [n] [x] [xs] [y] [ys] p1 p2 . 
+     subst (f_equal [Vec A (Succ n)] [Vec A (n)] [tail [A] [n]] [ConsV [n] x xs] [ConsV [n] y ys] p2) by p1
+
+consVInjectiveTail : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> [y : A] -> [ys : Vec A n] 
+                 -> (xs = ys) 
+                 -> (p : (ConsV [n] x xs : Vec A (Succ n)) = (ConsV [n] y ys : Vec A (Succ n))) 
+                 -> x = y
+consVInjectiveTail = \[A] [n] [x] [xs] [y] [ys] p1 p2 . 
+     (f_equal [Vec A (Succ n)] [A] [head [A] [n]] [ConsV [n] x xs] [ConsV [n] y ys] p2)
+
+lemma_x_eq_xs_neq_vec : [A :Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> [y : A] -> [ys : Vec A n] 
+                 -> (x = y) 
+                 -> (xs = ys -> Void) 
+                 -> ((ConsV [n] x xs : Vec A (Succ n)) = (ConsV [n] y ys : Vec A (Succ n))-> Void)
+lemma_x_eq_xs_neq_vec = \[A] [n] [x] [xs] [y] [ys] prf1 p prf2 . p (consVInjective [A] [n] [x] [xs] [y] [ys] prf1 prf2)
+
+lemma_x_neq_xs_eq_vec : [A :Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> [y : A] -> [ys : Vec A n] 
+                 -> (x = y -> Void) 
+                 -> (xs = ys) 
+                 -> ((ConsV [n] x xs : Vec A (Succ n)) = (ConsV [n] y ys : Vec A (Succ n))-> Void)
+lemma_x_neq_xs_eq_vec = \[A] [n] [x] [xs] [y] [ys] p p2 p3 . p (consVInjectiveTail [A] [n] [x] [xs] [y] [ys] p2 p3)
+
+lemma_x_neq_xs_neq_vec : [A :Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> [y : A] -> [ys : Vec A n] 
+                 -> (x = y -> Void)
+                 -> (xs = ys -> Void)
+                 -> ((ConsV [n] x xs : Vec A (Succ n)) = (ConsV [n] y ys : Vec A (Succ n)) -> Void)
+lemma_x_neq_xs_neq_vec = \[A] [n] [x] [xs] [y] [ys] p p2 p3 . 
+     p ((f_equal [Vec A (Succ n)] [A] [head [A] [n]] [ConsV [n] x xs] [ConsV [n] y ys] p3))
+
+decEqVec : [n : Nat] -> (a : Vec Nat n) -> (b : Vec Nat n) -> Dec (a = b)
+decEqVec = \ [n] a b . case a of
+  NilV            -> 
+    case b of
+      NilV            -> Yes Refl
+  ConsV [n1] x xs ->
+    case b of
+      ConsV [m1] y ys ->
+        case (decEqNat x y) of
+          Yes xeqy    -> 
+            case (decEqVec [n1] xs ys) of
+              Yes xseqys    -> Yes (consVInjLem [n1] [x] [xs] [y] [ys] xeqy xseqys)
+              No xsneqys  -> No  (lemma_x_eq_xs_neq_vec [Nat] [n1] [x] [xs] [y] [ys] xeqy xsneqys)
+          No  xneqy  ->
+            case (decEqVec [n1] xs ys) of
+              Yes xseqys    -> No (lemma_x_neq_xs_eq_vec [Nat] [n1] [x] [xs] [y] [ys] xneqy xseqys)
+              No  xsneqys -> No (lemma_x_neq_xs_neq_vec [Nat] [n1] [x] [xs] [y] [ys] xneqy xsneqys)
+
+data UniqueVec (A : Type) (n : Nat) (v : Vec A n) : Type where
+  UNilV of [v = NilV] [n = 0]-- Constructor for when V is empty
+  UConsV of [m : Nat] (x : A) (xs : Vec A m) ((ElemVec A m x xs) -> Void) (UniqueVec A m xs) [n = Succ m] [v = ConsV [m] x xs]
+
+lemma_x_in_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> (ElemVec A n x xs) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
+lemma_x_in_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
+  UConsV [m] x xs xNInXs others -> xNInXs pf
+
+lemma_xs_not_unique : [A : Type] -> [n : Nat] -> [x : A] -> [xs : Vec A n] -> ((UniqueVec A n xs) -> Void) -> ((UniqueVec A (Succ n) (ConsV [n] x xs)) -> Void)
+lemma_xs_not_unique = \ [A] [n] [x] [xs] pf p . case p of
+  UConsV [m] x xs xNInXs others -> pf others
+
+decUniqueVec : [n : Nat] -> (v : Vec Nat n) -> Dec (UniqueVec Nat n v)
+decUniqueVec = \ [n] v . case v of 
+  NilV           -> Yes UNilV
+  ConsV [m] x xs ->
+    case (isElemVec [m] x xs) of
+      Yes xInXs    -> No (lemma_x_in_xs_not_unique [Nat] [m] [x] [xs] xInXs)
+      No xNInXs ->
+        case (decUniqueVec [m] xs) of
+          Yes xsU ->  Yes (UConsV [m] x xs xNInXs xsU)
+          No xsNU -> No (lemma_xs_not_unique [Nat] [m] [x] [xs] xsNU)
+
+data SubsetVec (A : Type) (n : Nat) (a : Vec A n) (m : Nat) (b : Vec A m): Type where
+  SNilV1 of [n = 0] [a = NilV]
+  SNilV2 of [m = 0] [b = NilV]
+  SConsV of [n1 : Nat] (x : A) (xs : Vec A n1) (pfForx : (ElemVec A m x b))  (SubsetVec A n1 xs m b) [n = Succ n1] [a = ConsV [n1] x xs]
+
+lemma_x_not_in_b_vec : [A : Type] -> [x : A] -> [n : Nat] -> [xs : Vec A n] -> [y : A] -> [m : Nat] -> [ys : Vec A m] -> ((ElemVec A (Succ m) x (ConsV [m] y ys)) -> Void) -> ((SubsetVec A (Succ n) (ConsV [n] x xs) (Succ m) (ConsV [m] y ys)) -> Void)
+lemma_x_not_in_b_vec = \ [A] [x] [n] [xs] [y] [m] [ys] pfXNotInb pf .
+  case pf of 
+    SConsV [n1] a as pfFora others -> pfXNotInb pfFora
+
+lemma_xs_not_subset_b_vec : [A : Type] -> [x : A] -> [n : Nat] -> [xs : Vec A n] -> [y : A] -> [m : Nat] -> [ys : Vec A m] -> ((SubsetVec A n xs (Succ m) (ConsV [m] y ys)) -> Void) -> ((SubsetVec A (Succ n) (ConsV [n] x xs) (Succ m) (ConsV [m] y ys)) -> Void)
+lemma_xs_not_subset_b_vec = \ [A] [x] [n] [xs] [y] [m] [ys] xsNotSubsetPf p .
+  case p of
+    SConsV [n1] a as pfFora others -> xsNotSubsetPf others
+
+decSubsetVecs : [n : Nat] -> (a : Vec Nat n) -> [m : Nat] -> (b : Vec Nat m) -> Dec (SubsetVec Nat n a m b)
+decSubsetVecs = \ [n] a [m] b . case a of
+  NilV       -> Yes (SNilV1)
+  ConsV [n1] x xs -> 
+    case b of
+      NilV       -> Yes (SNilV2)
+      ConsV [m1] y ys -> 
+        case (decSubsetVecs [n1] xs [m] b) of
+          Yes pf    -> 
+            case (isElemVec [m] x b) of
+              Yes elemPf  -> Yes (SConsV [n1] x xs (elemPf) pf)
+              No p   -> No (lemma_x_not_in_b_vec [Nat] [x] [n1] [xs] [y] [m1] [ys] (p))
+          No p -> No (lemma_xs_not_subset_b_vec [Nat] [x] [n1] [xs] [y] [m1] [ys] p)
+
+-- IO Monad
+
+data IO (A : Type) : Type where
+    MkIO of (A)
+
+returnIO : [A : Type] -> A -> IO A
+returnIO = \[A] a . MkIO a
+
+bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
+bindEq = \ [A] [B] a f . case a of
+                            MkIO inner -> f inner
+
+bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
+bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
+
+-- print : List Char -> IO Unit
+-- print = TRUSTME -- TODO add print
+
+-- Concurrency Primatives
+
+------------------ CHANNEL ------------------
+
+-- Channel Structure
+data Channel (A : Type) (chid : Nat) : Type where
+    MkChannel of (id : Nat) [id = chid]
+
+-- | Channel helper functions
+
+-- | Primative to create a channel with id, returns true or false if made,
+-- | Assumes that the id is a unique channel id
+prim_create_channel : [A : Type] -> (id : Nat) -> Bool
+prim_create_channel = TRUSTME
+
+-- | This function is an enqueue to a channel
+channelEnqueue : [A : Type] -> (id : Nat) -> (x : Maybe A) -> Channel A id -> IO Unit
+channelEnqueue = TRUSTME
+
+-- | This function is an unsafe dequeue from a channel, meaning that the mutex cannot be guaranteed to be acquired
+channelDequeue : [A : Type] -> (id : Nat) -> Channel A id -> IO (Maybe A)
+channelDequeue = TRUSTME
+
+------------------ PI-CALC ------------------
+
+-- | Pi-Calculus functions
+
+end : IO Unit
+end = TRUSTME
+
+send : [A : Type] -> (id : Nat) -> (x : Maybe A) -> Channel A id -> IO Unit
+send = \ [A] id x ch . channelEnqueue [A] id x ch
+
+receive : [A : Type] -> (id : Nat) -> Channel A id -> IO (Maybe A)
+receive = \ [A] id ch . channelDequeue [A] id ch
+
+link : [A : Type] -> (id : Nat) -> [n : Nat] -> (idSet : Vec Nat n) -> ((ElemVec Nat n id idSet) -> Void) 
+    -- -> IO (Maybe (Sigma chid (Sigma (Channel A chid) (Sigma newIdSet (Sigma (id = chid) ((ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet))))))
+    -> IO (Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}}))
+link = \ [A] id [n] idSet pf . case (prim_create_channel [A] id) of
+    True    -> 
+        returnIO [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}})]
+            (Just ((id, (MkChannel id, (ConsV [n] id idSet, (Refl, Refl))))))
+    False   -> returnIO [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ n) | (id = chid) * (ConsV [n] id idSet : Vec Nat (Succ n)) = newIdSet}})] Nothing
+
+
+spawn : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet) -> Void)
+     -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }})) -- Note: Need to keep pf (pid = newPid) as used in pattern library
+spawn = \ pid n pidSet pf . 
+    returnIO [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }})] 
+        (Just (pid, (ConsV [n] pid pidSet, (Refl, Refl))))
+
+run : (pid : Nat) -> (n : Nat) -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet)) -> (process : IO Unit) 
+   -> IO (Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet}))
+run = \ pid n pidSet pf process . returnIO [Maybe ({returnedPidSet : Vec Nat n | pidSet = returnedPidSet})] (Just (pidSet, Refl))
+
+spawnAndRun : (pid : Nat) -> [n : Nat] -> (pidSet : Vec Nat n) -> ((ElemVec Nat n pid pidSet) -> Void) -> (process : IO Unit)
+        -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }}))
+spawnAndRun =  TRUSTME
+
+
+-- Patterns
+
+data Farm (A : Type) (n : Nat) : Type where
+  MkFarm of (m : Nat) (f : A -> A) [m = n]
+
+producerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> List A -> IO Unit
+producerWrapper = \ [A] id ch list . 
+    case list of
+        Nil         -> bind [Unit] [Unit] (send [A] id Nothing ch) (end)
+        Cons x xs   -> bind [Unit] [Unit] (send [A] id (Just x) ch) (producerWrapper [A] id ch xs)
+
+workerWrapper : [A : Type] -> (receiveId : Nat) -> (sendId : Nat) -> Channel A receiveId  -> Channel A sendId -> (f : A -> A) ->  IO Unit
+workerWrapper = \ [A] receiveId sendId receiveChannel sendChannel f.
+    bindEq [Maybe A] [Unit] 
+    (receive [A] receiveId receiveChannel) 
+    (\ mx . 
+      case mx of
+          Nothing -> bind [Unit] [Unit] (send [A] sendId Nothing sendChannel) (end)
+          Just x  -> bind [Unit] [Unit] (send [A] sendId (Just (f x)) sendChannel) (workerWrapper [A] receiveId sendId receiveChannel sendChannel f)
+    )
+
+consumerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> IO (List A)
+consumerWrapper = \ [A] chid ch .
+    bindEq [Maybe A] [List A] 
+    (receive [A] chid ch)
+    (\ mx .
+      case mx of
+        Nothing -> 
+          returnIO [List A] Nil
+        Just x  -> 
+          bindEq [List A] [List A] 
+          (consumerWrapper [A] chid ch) 
+          (\ res . 
+            returnIO [List A] (Cons x res)
+          )
+    )
+
+spawnWorkersFarm : [A : Type]
+                -> (n : Nat) -- The size of the pidSet
+                -> (pidSet : Vec Nat n) -- The pidSet
+                -> (nDash : Nat) -- The size of the pids provided
+                -> (pids : Vec Nat nDash) -- The set of pids provided
+                -> (UniqueVec Nat (plus nDash n) (append [Nat] [nDash] [n] pids pidSet))
+                -> (Vec {id : Nat | Channel A id} nDash) -- The set of channels
+                -> {id : Nat | Channel A id} -- The consumer Channel
+                -> (f : A -> A) -- The function
+                -> IO (Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))}))
+spawnWorkersFarm = \ [A] n pidSet nDash pids pidPf chs consumerCh f.
+  let (consumerChid, consumerChannel) = consumerCh in
+  case pids of 
+    NilV -> 
+      returnIO 
+      [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+      (Just ((pidSet, Refl)))
+    ConsV [m] x xs ->
+      case pidPf of
+        UConsV [mDash] y ys pf restPf ->
+          case chs of
+            ConsV [nDashDash] curCh restChs ->
+              let (currChid, currChannel) = curCh in
+              bindEq
+              [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ mDash) | (y = newPid) * ((ConsV [mDash] y ys : Vec Nat (Succ mDash)) = newPidSet) }})]
+              [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+              (spawnAndRun y [mDash] ys pf (workerWrapper [A] currChid consumerChid currChannel consumerChannel f))
+              ( \ mres . case mres of
+                Nothing ->
+                  returnIO 
+                  [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+                  Nothing
+                Just res ->  
+                  bindEq
+                  [Maybe ({newPidSet : Vec Nat (plus (pred nDash) n) | newPidSet = ((append [Nat] [pred nDash] [n] xs pidSet) : Vec Nat (plus (pred nDash) n))})]
+                  [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+                  (spawnWorkersFarm [A] n pidSet (pred nDash) xs restPf restChs consumerCh f)
+                  (\ mress . case mress of
+                    Nothing ->
+                      returnIO 
+                      [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+                      Nothing
+                    Just res ->
+                      let (newPidSet, pfNewPidSetCorrect) = res in
+                      returnIO 
+                      [Maybe ({newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))})]
+                      (Just (ConsV [(plus (pred nDash) n)] y newPidSet, subst Refl by pfNewPidSetCorrect))
+                  )
+              ) 
+
+createChannelsFarm : [A : Type]
+                  -> (m : Nat) -- The size of the chidSet
+                  -> (chidSet : Vec Nat m) -- The chidSet
+                  -> (mDash : Nat) -- The size of the chids provided
+                  -> (chids : Vec Nat mDash) -- The set of chids provided
+                  -> (UniqueVec Nat (plus mDash m) (append [Nat] [mDash] [m] chids chidSet))
+                  -> IO (Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))}))
+createChannelsFarm = \ [A] m chidSet mDash chids chidPf . 
+  case chids of
+    NilV -> 
+      returnIO 
+      [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+      (Just (NilV, (chidSet, Refl)))
+    ConsV [n] x xs ->
+      case chidPf of
+        UConsV [nDash] y ys pf restPf ->
+          bindEq
+            [Maybe ({chid : Nat | (Channel A chid) * {newIdSet : Vec Nat (Succ nDash) | (y = chid) * (ConsV [nDash] y ys : Vec Nat (Succ nDash)) = newIdSet}})]
+            [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+            -- Linking to create a channel
+            (link [A] y [nDash] ys pf)
+            (\ mres .  case mres of
+              Nothing ->
+                returnIO
+                [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                
+                Nothing
+              Just res -> 
+                let (resChid, rest1) = res in
+                let (ch, rest2) = rest1 in
+                let (newChidSet, pfs) = rest2 in
+                let (chidEqResChidPf, pfNewChidSetCorrect) = pfs in
+                -- Recursing
+                bindEq
+                [Maybe ((Vec {id : Nat | Channel A id} (pred mDash)) * {newChidSet : Vec Nat (plus (pred mDash) m) | newChidSet = ((append [Nat] [pred mDash] [m] xs chidSet) : Vec Nat (plus (pred mDash) m))})]
+                [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                (createChannelsFarm [A] m chidSet (pred mDash) xs restPf)
+                (\ mress . case mress of
+                  Nothing ->
+                    returnIO
+                    [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                    
+                    Nothing
+                  Just ress -> 
+                    let (chs, rest3) = ress in
+                    let (returnedChidSet, pfReturnedChidSetCorrect) = rest3 in
+                    returnIO
+                    [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                    (Just (ConsV [n] (subst (y, ch) by chidEqResChidPf) chs, (ConsV [(plus n m)] (y) returnedChidSet, subst Refl by pfReturnedChidSetCorrect)))
+                )
+            )
+
+createFarm : [A : Type] -- The type for the function
+          -> (n : Nat) -- The size of the pidSet
+          -> (pidSet : Vec Nat n) -- The pidSet
+          -> (nDash : Nat) -- The size of the pids provided
+          -> (pids : Vec Nat nDash) -- The set of pids provided
+          -> (UniqueVec Nat (plus nDash n) (append [Nat] [nDash] [n] pids pidSet))
+          -> (m : Nat) -- The size of the chidSet
+          -> (chidSet : Vec Nat m) -- The chidSet
+          -> (mDash : Nat) -- The size of the chids provided
+          -> (chids : Vec Nat mDash) -- The set of chids provided
+          -> (UniqueVec Nat (plus mDash m) (append [Nat] [mDash] [m] chids chidSet))
+          -> (numWorkers : Nat) -- Number of workers
+          -> ((numWorkers = Zero) -> Void) -- Farm must have at least one worker
+          -> (nDash = (Succ numWorkers)) -- Proof that the number of pids provided is correct
+          -> (mDash = (Succ numWorkers)) -- Proof that the number of chids provided is correct
+          -> (f : A -> A) -- The function to farm
+          -> (List A) -- Input
+          -> IO (Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))}))
+createFarm = \ [A] n pidSet nDash pids pidPf m chidSet mDash chids chidPf numWorkers pfNotZ pfPidsNCorrect pfChidsMCorrect f input. 
+  -- Proof that nDash = mDash
+  -- let nDEqMd =  in 
+  bindEq 
+  [Maybe ((Vec {id : Nat | Channel A id} mDash) * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+  [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+  -- Creating all the channels
+  (createChannelsFarm [A] m chidSet mDash chids chidPf)
+  (\ mres1 . case mres1 of
+    Nothing ->
+      returnIO
+      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+      
+      Nothing
+    Just res1 -> 
+      let (chs, chidPfToReturn) = res1 in
+      case chs of -- Getting the consumer Channel
+        NilV -> 
+          returnIO
+          [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+          
+          Nothing
+        ConsV [mDashDash] consumerCh otherChs ->
+          let (consumerChid, consumerChannel) = consumerCh in
+          case pids of -- Getting the producer pid
+            NilV -> 
+              returnIO
+              [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+              
+              Nothing
+            ConsV [nDashDash] x xs -> 
+              case pidPf of
+                UConsV [nDashDashDash] producerPid restPids producerPidPf restPfs ->
+                  -- Proof that mDashDash = nDashDash
+                  bindEq 
+                  [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ nDashDashDash) | (producerPid = newPid) * ((ConsV [nDashDashDash] producerPid restPids : Vec Nat (Succ nDashDashDash)) = newPidSet) }})]
+                  [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                  -- Spawning the producer
+                  (spawnAndRun producerPid [nDashDashDash] restPids producerPidPf (producerWrapper [A] consumerChid consumerChannel input))
+                  (\ mres2 . case mres2 of 
+                    Nothing ->
+                      returnIO
+                      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                      
+                      Nothing
+                    Just res2 ->
+                      bindEq 
+                      [Maybe ({newPidSet : Vec Nat (plus (nDashDash) n) | newPidSet = ((append [Nat] [nDashDash] [n] xs pidSet) : Vec Nat (plus (nDashDash) n))})]
+                      [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                      -- Spawning all the workers
+                      (spawnWorkersFarm [A] n pidSet (pred nDash) xs restPfs (subst otherChs by (succInjective [mDashDash] [nDashDash] (trans [Nat] [Succ mDashDash] [nDash] [Succ nDashDash] (sym [Nat] [nDash] [Succ mDashDash] (trans [Nat] [nDash] [mDash] [Succ mDashDash] ((trans [Nat] [nDash] [Succ numWorkers] [mDash] pfPidsNCorrect (sym [Nat] [mDash] [Succ numWorkers] pfChidsMCorrect ))) (Refl : mDash = Succ mDashDash))) (Refl : nDash = Succ nDashDash)))) consumerCh f)
+                      (\ mres3 . case mres3 of
+                        Nothing ->
+                          returnIO
+                          [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                          
+                          Nothing
+                        Just workerPidPfs ->
+                          let (workersPidSet, workerPidSetPf) = workerPidPfs in
+                          bindEq
+                          [List A]
+                          [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                          (consumerWrapper [A] consumerChid consumerChannel)
+                          (\ resultantList . 
+                            returnIO
+                            [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
+                            
+                            (Just (
+                              (resultantList),  
+                                (
+                                (MkFarm numWorkers f),
+                                (((
+                                  ConsV [plus nDashDash n] producerPid workersPidSet,
+                                  consVInjLem [plus nDashDash n] [producerPid] [workersPidSet] [producerPid] [append [Nat] [nDashDash] [n] xs pidSet] Refl workerPidSetPf
+                                  )
+                                 ),
+                                  (chidPfToReturn)
+                                )
+                                )
+                              )
+                            )
+                          )             
+                      )
+                  )                            
+  )
+
+id : Nat -> Nat
+id = \a . a
+
+main2 : IO Unit
+main2 = case decUniqueVec [2] (append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of--(ConsV [1] 2 (ConsV [0] 1 NilV)) of--(append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of
+          Yes pf1 ->
+            -- end
+            bind
+            [(Maybe ((List Nat) * (Farm Nat 1) * {newPidSet : Vec Nat (plus 2 0) | newPidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))} * {newChidSet : Vec Nat (plus 2 0) | newChidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))}))]
+            [Unit]
+            (createFarm [Nat] 0 (NilV) 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 0 NilV 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 1 (negEqSym [Nat] [0] [1] (ZnotS 0)) (Refl) (Refl) (id) <1>)
+            end
+          -- No cPf1 -> end
+

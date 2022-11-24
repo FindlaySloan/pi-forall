@@ -56,11 +56,11 @@ echo "Executing the pi-forall translator"
 stack exec -- pi-forall $INPUT
 
 echo "Formatting the cpp file"
-clang-format -style=Google -i $COUT
+clang-format -style='{BasedOnStyle: Google, ColumnLimit: 200}' -i $COUT
 
 
 echo "Executing the g++ compiler"
-g++ --std=c++17 -o=$OUTPUT $COUT
+g++ --std=c++17 -o=$OUTPUT $COUT -Wno-return-type
 
 
 

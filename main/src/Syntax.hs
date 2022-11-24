@@ -281,7 +281,7 @@ falseName = "False"
 tyUnitName :: TCName
 tyUnitName = "Unit"
 litUnitName :: DCName
-litUnitName = "()"
+litUnitName = "unit"
 natName :: TCName
 natName = "Nat"
 zeroName :: DCName

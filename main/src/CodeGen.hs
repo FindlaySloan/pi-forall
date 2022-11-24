@@ -25,7 +25,9 @@ generateInterDef i@(FunctionDef funcName tempArgs args retType def) = do
 generateInterDef i@(FunctionImpl funcName args lines) = do
   s <- generateInterDefForFunctionImpl i
   return $ addNewline s
-generateInterDef i@(DataType _ _ _ ) = do
+generateInterDef i@(DataType name _ _ ) 
+  | name == "Nat" =  return ""
+  | otherwise = do
   s <- generateInterDefForDataType i
   return $ addNewline s
 generateInterDef (UNDEF) = return ""
