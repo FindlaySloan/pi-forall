@@ -259,3 +259,302 @@ Def head (Pos "pi-tests/Translate.pi" (line 8, column 8) (Lam Irr (<A> Lam Irr (
 [Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 12) Type) (<A> Pos "pi-tests/Translate.pi" (line 7, column 21) (Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 24) (TCon "Nat" [])) (<n> Pos "pi-tests/Translate.pi" (line 7, column 32) (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var 2@0))))),Pi Irr (Pos "pi-tests/Translate.pi" (line 7, column 24) (TCon "Nat" [])) (<n> Pos "pi-tests/Translate.pi" (line 7, column 32) (Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])}]) (<_2> Var A9))),Pi Rel (TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}]) (<_2> Var A9),TCon "Vec" [Arg {argEp = Rel, unArg = Var A9},Arg {argEp = Rel, unArg = Pos "pi-tests/Translate.pi" (line 7, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n10}])}],Var A9])
 
 [Arg {argEp = Rel, unArg = (DCon "Cons1" [Arg {argEp = Irr, unArg = (DCon "Zero" [])},Arg {argEp = Rel, unArg = LitChar 'a'},Arg {argEp = Rel, unArg = DCon "Nil1" []}])},Arg {argEp = Irr, unArg = Pos "pi-tests/Translate.pi" (line 13, column 18) (DCon "Zero" [])},Arg {argEp = Irr, unArg = Pos "pi-tests/Translate.pi" (line 13, column 11) TyChar}]
+
+[Module 
+    {moduleName = "Translate",
+     moduleImports = [],
+     moduleEntries = 
+        [TypeSig (Sig {sigName = sym, sigEp = Rel, sigType = (Pi Irr (Type) (<A> (Pi Irr ((Var 0@0)) (<x> (Pi Irr ((Var 1@0)) (<y>) (Pi Rel ((TyEq (Var 1@0) (Var 0@0))) (<_> TyEq (Var 1@0) (Var 2@0)))))))))}),
+        
+        Def sym ((Lam Irr (<A> Lam Irr (<x> Lam Irr (<y> Lam Rel (<pf> (Subst (Refl) ((Var 0@0)))))))),
+        
+        [Pi Irr (Type) (<A> ((Var 0@0)) (<x> (Pi Irr ((Var 1@0)) (<y> (Pi Rel ((TyEq (Var 1@0) (Var 0@0))) (<_> TyEq (Var 1@0) (Var 2@0)))))))),
+        
+        Pi Irr ((Var A8)) (<x> (Pi Irr ((Var A8)) (<y> (Pi Rel ((TyEq (Var 1@0) (Var 0@0))) (<_> TyEq (Var 1@0) (Var 2@0)))))),
+        
+        Pi Irr (Var A8)) (<y> (Pi Rel ((TyEq (Var x9) (Var 0@0))) (<_> TyEq (Var 1@0) (Var x9)))),Pi Rel ((TyEq (Var x9) (Var y10))) (<_> TyEq (Var y10) (Var x9)),TyEq (Var y10) (Var x9)])], 
+        
+     
+     moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Nat","Sigma","Unit"],
+     
+     dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}]
+
+
+[Module {moduleName = "NewProofs", moduleImports = [], moduleEntries = [Data "Void" (Telescope []) [],Data "Dec" (Telescope [TypeSig (Sig {sigName = prop, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 5, column 18) Type})]) [ConstructorDef "pi-tests/NewProofs.pi" (line 6, column 3) "Yes" (Telescope [TypeSig (Sig {sigName = prf, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 6, column 17) (Var prop)})]),ConstructorDef "pi-tests/NewProofs.pi" (line 7, column 3) "No" (Telescope [TypeSig (Sig {sigName = cont, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 7, column 18) (Pi Rel (Var prop) (<_> TCon "Void" []))})])],TypeSig (Sig {sigName = f_equal, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 9, column 12) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 15) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var 1@0) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var 2@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var 3@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0}))))))))))))))}),Def f_equal (Pos "pi-tests/NewProofs.pi" (line 10, column 11) (Lam Irr (<A> Lam Irr (<B> Lam Irr (<f> Lam Irr (<x> Lam Irr (<y> Lam Rel (<pf> Pos "pi-tests/NewProofs.pi" (line 11, column 3) (Subst (Pos "pi-tests/NewProofs.pi" (line 11, column 9) Refl) (Pos "pi-tests/NewProofs.pi" (line 11, column 17) (Var 0@0)))))))))),[Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 15) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var 1@0) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var 2@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var 3@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0}))))))))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var A14) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var A14)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var A14)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0}))))))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var A14) (<_1> Var B15))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var A14)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var A14)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0}))))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var A14)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var A14)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var f16) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var f16) (Arg {argEp = Rel, unArg = Var 1@0}))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var A14)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var x17) (Var 0@0)) (<_2> TyEq (App (Var f16) (Arg {argEp = Rel, unArg = Var x17})) (App (Var f16) (Arg {argEp = Rel, unArg = Var 1@0}))))),Pi Rel (TyEq (Var x17) (Var y18)) (<_2> TyEq (App (Var f16) (Arg {argEp = Rel, unArg = Var x17})) (App (Var f16) (Arg {argEp = Rel, unArg = Var y18}))),TyEq (App (Var f16) (Arg {argEp = Rel, unArg = Var x17})) (App (Var f16) (Arg {argEp = Rel, unArg = Var y18}))]),TypeSig (Sig {sigName = ZnotS, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 13, column 9) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 14) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<_3> TCon "Void" []))))}),Def ZnotS (Pos "pi-tests/NewProofs.pi" (line 14, column 9) (Lam Rel (<n> Lam Rel (<r> Pos "pi-tests/NewProofs.pi" (line 14, column 16) (Contra (Pos "pi-tests/NewProofs.pi" (line 14, column 23) (Var 0@0)))))),[Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 14) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<_3> TCon "Void" []))),Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n24}]))) (<_3> TCon "Void" []),TCon "Void" []]),TypeSig (Sig {sigName = sym, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 16, column 7) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 10) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 16, column 19) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 22) (Var 0@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Var 1@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var 1@0) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var 2@0)))))))))}),Def sym (Pos "pi-tests/NewProofs.pi" (line 17, column 7) (Lam Irr (<A> Lam Irr (<x> Lam Irr (<y> Lam Rel (<pf> Pos "pi-tests/NewProofs.pi" (line 18, column 3) (Subst (Pos "pi-tests/NewProofs.pi" (line 18, column 9) Refl) (Pos "pi-tests/NewProofs.pi" (line 18, column 17) (Var 0@0)))))))),[Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 10) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 16, column 19) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 22) (Var 0@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Var 1@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var 1@0) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var 2@0)))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 22) (Var A34)) (<x> Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Var A34)) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var 1@0) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var 2@0)))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Var A34)) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var x35) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var x35)))),Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var x35) (Var y36))) (<_4> TyEq (Var y36) (Var x35)),TyEq (Var y36) (Var x35)]),TypeSig (Sig {sigName = negEqSym, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 20, column 12) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 17) Type) (<t> Pos "pi-tests/NewProofs.pi" (line 20, column 25) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Var 0@0)) (<a> Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var 1@0)) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var 2@0)) (<_7> TCon "Void" []))))))))))}),Def negEqSym (Pos "pi-tests/NewProofs.pi" (line 21, column 12) (Lam Irr (<t> Lam Irr (<a> Lam Irr (<b> Lam Rel (<p> Lam Rel (<h> Pos "pi-tests/NewProofs.pi" (line 21, column 31) (App (Var 1@0) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 21, column 34) (App (App (App (App (Var sym) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 21, column 39) (Var 4@0)})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var 2@0)})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 21, column 47) (Var 3@0)})) (Arg {argEp = Rel, unArg = Var 0@0}))})))))))),[Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 17) Type) (<t> Pos "pi-tests/NewProofs.pi" (line 20, column 25) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Var 0@0)) (<a> Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var 1@0)) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var 2@0)) (<_7> TCon "Void" []))))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Var t49)) (<a> Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var t49)) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var 2@0)) (<_7> TCon "Void" []))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var t49)) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var a50) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var a50)) (<_7> TCon "Void" []))))),Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var a50) (Var b51)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var b51) (Var a50)) (<_7> TCon "Void" []))),Pi Rel (TyEq (Var b51) (Var a50)) (<_7> TCon "Void" []),TCon "Void" [],Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var a50) (Var b51)) (<_5> TCon "Void" [])),TyEq (Pos "pi-tests/NewProofs.pi" (line 21, column 47) (Var a50)) (Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var b51)),Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var b51)) (Pos "pi-tests/NewProofs.pi" (line 21, column 47) (Var a50)))) (<_4> TyEq (Pos "pi-tests/NewProofs.pi" (line 21, column 47) (Var a50)) (Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var b51)))),Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Pos "pi-tests/NewProofs.pi" (line 21, column 39) (Var t49))) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var b51)) (Var 0@0))) (<_4> TyEq (Var 1@0) (Pos "pi-tests/NewProofs.pi" (line 21, column 43) (Var b51)))))),Pos "pi-tests/NewProofs.pi" (line 16, column 19) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 22) (Pos "pi-tests/NewProofs.pi" (line 21, column 39) (Var t49))) (<x> Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Pos "pi-tests/NewProofs.pi" (line 21, column 39) (Var t49))) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var 1@0) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var 2@0))))))),Pos "pi-tests/NewProofs.pi" (line 16, column 7) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 10) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 16, column 19) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 22) (Var 0@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 16, column 28) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 16, column 31) (Var 1@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 16, column 37) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 16, column 38) (TyEq (Var 1@0) (Var 0@0))) (<_4> TyEq (Var 1@0) (Var 2@0))))))))),Pos "pi-tests/NewProofs.pi" (line 20, column 17) Type,Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var t49),Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Var t49),TyEq (Var b51) (Var a50)]),TypeSig (Sig {sigName = pred, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 23, column 8) (Pi Rel (TCon "Nat" []) (<_8> TCon "Nat" []))}),Def pred (Pos "pi-tests/NewProofs.pi" (line 24, column 8) (Lam Rel (<n> Pos "pi-tests/NewProofs.pi" (line 24, column 13) (Case (Pos "pi-tests/NewProofs.pi" (line 24, column 18) (Pos "pi-tests/NewProofs.pi" (line 24, column 18) (Var 0@0))) [Match (<(PatCon "Zero" [])> Pos "pi-tests/NewProofs.pi" (line 25, column 13) (Pos "pi-tests/NewProofs.pi" (line 25, column 13) (DCon "Zero" []))),Match (<(PatCon "Succ" [(PatVar m,Rel)])> Pos "pi-tests/NewProofs.pi" (line 26, column 15) (Pos "pi-tests/NewProofs.pi" (line 26, column 15) (Var 0@0)))]))),[Pi Rel (TCon "Nat" []) (<_8> TCon "Nat" []),TCon "Nat" [],TCon "Nat" [],TCon "Nat" []]),TypeSig (Sig {sigName = succInjective, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 28, column 17) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 25) (TCon "Nat" [])) (<left> Pos "pi-tests/NewProofs.pi" (line 28, column 33) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" [])) (<right> Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var 1@0}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Var 2@0) (Var 1@0)))))))))}),Def succInjective (Pos "pi-tests/NewProofs.pi" (line 29, column 17) (Lam Irr (<left> Lam Irr (<right> Lam Rel (<p> Pos "pi-tests/NewProofs.pi" (line 30, column 3) (App (App (App (App (App (App (Var f_equal) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" [])})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 18) (TCon "Nat" [])})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 2@0}])})) (Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 43) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 1@0}])})) (Arg {argEp = Rel, unArg = Var 0@0})))))),[Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 25) (TCon "Nat" [])) (<left> Pos "pi-tests/NewProofs.pi" (line 28, column 33) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" [])) (<right> Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var 1@0}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Var 2@0) (Var 1@0)))))))),Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" [])) (<right> Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Var left67) (Var 1@0)))))),Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var right68}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Var left67) (Var right68)))),TyEq (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}])})) (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 43) (DCon "Succ" [Arg {argEp = Rel, unArg = Var right68}])})),Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}])) (Pos "pi-tests/NewProofs.pi" (line 30, column 43) (DCon "Succ" [Arg {argEp = Rel, unArg = Var right68}]))) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}])})) (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 43) (DCon "Succ" [Arg {argEp = Rel, unArg = Var right68}])})))),Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}])) (Var 0@0)) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 30, column 31) (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}])})) (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Var 1@0})))))),Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Pos "pi-tests/NewProofs.pi" (line 30, column 24) (Var pred)) (Arg {argEp = Rel, unArg = Var 1@0})))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" [])) (<_1> Pos "pi-tests/NewProofs.pi" (line 30, column 18) (TCon "Nat" [])))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" [])) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 30, column 12) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 12) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 15) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var 1@0) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var 2@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var 3@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))))))),Type,Type,Pos "pi-tests/NewProofs.pi" (line 23, column 8) (Pi Rel (TCon "Nat" []) (<_8> TCon "Nat" [])),TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 28, column 25) (TCon "Nat" []),TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" []),Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var left67}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var right68}]))]),TypeSig (Sig {sigName = decEqNat, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 33, column 12) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 17) (TCon "Nat" [])) (<a> Pos "pi-tests/NewProofs.pi" (line 33, column 25) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 30) (TCon "Nat" [])) (<b> Pos "pi-tests/NewProofs.pi" (line 33, column 38) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var 1@0) (Var 0@0))}])))))}),
+
+RecDef decEqNat ((Lam Rel (<a> Lam Rel (<b> 
+    (Case (((Var 1@0))) 
+        [Match (<(PatCon "Zero" [])> 
+            ((Case (((Var 1@0))) 
+                [Match (<(PatCon "Zero" [])> ((DCon "Yes" [Arg {argEp = Rel, unArg = Refl}]))),
+                Match (<(PatCon "Succ" [(PatVar n,Rel)])> ((DCon "No" [Arg {argEp = Rel, unArg = (App (Var ZnotS) (Arg {argEp = Rel, unArg = Var 0@0}))}])))]))),
+         Match (<(PatCon "Succ" [(PatVar n,Rel)])> 
+            ((Case (((Var 1@0))) 
+                [Match (<(PatCon "Zero" [])> ((DCon "No" [Arg {argEp = Rel, unArg = (App (App (App (App (Var negEqSym) (Arg {argEp = Irr, unArg = (TCon "Nat" [])})) (Arg {argEp = Irr, unArg = (DCon "Zero" [])})) (Arg {argEp = Irr, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = Var 1@0}])})) (Arg {argEp = Rel, unArg = (App (Var ZnotS) (Arg {argEp = Rel, unArg = Var 1@0}))}))}]))),
+                
+                Match (<(PatCon "Succ" [(PatVar m,Rel)])> 
+                    ((Case ((((App (App (Var decEqNat) (Arg {argEp = Rel, unArg = Var 1@0})) (Arg {argEp = Rel, unArg = Var 0@0}))))) 
+                        [Match (<(PatCon "Yes" [(PatVar p,Rel)])> ((DCon "Yes" [Arg {argEp = Rel, unArg = (App (App (App (App (App (App (Var f_equal) (Arg {argEp = Irr, unArg = (TCon "Nat" [])})) (Arg {argEp = Irr, unArg = (TCon "Nat" [])})) (Arg {argEp = Irr, unArg = (Lam Rel (<x> (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))})) (Arg {argEp = Irr, unArg = (Var 2@0)})) (Arg {argEp = Irr, unArg = (Var 1@0)})) (Arg {argEp = Rel, unArg = Var 0@0}))}]))),
+                        
+                        Match (<(PatCon "No" [(PatVar p,Rel)])> ((DCon "No" [Arg {argEp = Rel, unArg = (Lam Rel (<h> (App (Var 1@0) (Arg {argEp = Rel, unArg = (App (App (App (Var succInjective) (Arg {argEp = Irr, unArg = (Var 3@0)})) (Arg {argEp = Irr, unArg = (Var 2@0)})) (Arg {argEp = Rel, unArg = Var 0@0}))}))))}])))])))])))])))),
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+[Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 17) (TCon "Nat" [])) (<a> Pos "pi-tests/NewProofs.pi" (line 33, column 25) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 30) (TCon "Nat" [])) (<b> Pos "pi-tests/NewProofs.pi" (line 33, column 38) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var 1@0) (Var 0@0))}])))),Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 30) (TCon "Nat" [])) (<b> Pos "pi-tests/NewProofs.pi" (line 33, column 38) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var 0@0))}])),Pos "pi-tests/NewProofs.pi" (line 33, column 17) (TCon "Nat" []),Pos "pi-tests/NewProofs.pi" (line 33, column 30) (TCon "Nat" []),TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))}],TyEq (Var a85) (Var b86),TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))}],Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n87}]))) (<_3> TCon "Void" [])),Pos "pi-tests/NewProofs.pi" (line 13, column 9) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 14) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<_3> TCon "Void" [])))),TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 33, column 30) (TCon "Nat" []),TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))}],Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 39, column 52) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n89}])) (Pos "pi-tests/NewProofs.pi" (line 39, column 45) (DCon "Zero" []))) (<_7> TCon "Void" [])),Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 39, column 45) (DCon "Zero" [])) (Pos "pi-tests/NewProofs.pi" (line 39, column 52) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n89}]))) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 39, column 52) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n89}])) (Pos "pi-tests/NewProofs.pi" (line 39, column 45) (DCon "Zero" []))) (<_7> TCon "Void" [])))),Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Pos "pi-tests/NewProofs.pi" (line 39, column 39) (TCon "Nat" []))) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 39, column 45) (DCon "Zero" [])) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Pos "pi-tests/NewProofs.pi" (line 39, column 45) (DCon "Zero" []))) (<_7> TCon "Void" [])))))),Pos "pi-tests/NewProofs.pi" (line 20, column 25) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Pos "pi-tests/NewProofs.pi" (line 39, column 39) (TCon "Nat" []))) (<a> Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Pos "pi-tests/NewProofs.pi" (line 39, column 39) (TCon "Nat" []))) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var 2@0)) (<_7> TCon "Void" [])))))))),Pos "pi-tests/NewProofs.pi" (line 20, column 12) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 17) Type) (<t> Pos "pi-tests/NewProofs.pi" (line 20, column 25) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 30) (Var 0@0)) (<a> Pos "pi-tests/NewProofs.pi" (line 20, column 35) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 20, column 40) (Var 1@0)) (<b> Pos "pi-tests/NewProofs.pi" (line 20, column 46) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 20, column 47) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_5> TCon "Void" []))) (<_6> Pos "pi-tests/NewProofs.pi" (line 20, column 66) (Pi Rel (TyEq (Var 1@0) (Var 2@0)) (<_7> TCon "Void" [])))))))))),Type,TCon "Nat" [],TCon "Nat" [],TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var n89}]))) (<_3> TCon "Void" [])),Pos "pi-tests/NewProofs.pi" (line 13, column 9) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 14) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 13, column 22) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 13, column 23) (TyEq (DCon "Zero" []) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<_3> TCon "Void" [])))),TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 33, column 38) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var n89) (Var m91))}]),TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))}],TyEq (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 41, column 78) (Var n89)})) (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 41, column 82) (Var m91)})),Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 41, column 78) (Var n89)) (Pos "pi-tests/NewProofs.pi" (line 41, column 82) (Var m91))) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 41, column 78) (Var n89)})) (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 41, column 82) (Var m91)})))),Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Pos "pi-tests/NewProofs.pi" (line 41, column 78) (Var n89)) (Var 0@0)) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 41, column 78) (Var n89)})) (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Var 1@0})))))),Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Pos "pi-tests/NewProofs.pi" (line 41, column 64) (Lam Rel (<x> Pos "pi-tests/NewProofs.pi" (line 41, column 69) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}])))) (Arg {argEp = Rel, unArg = Var 1@0})))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" [])) (<_1> Pos "pi-tests/NewProofs.pi" (line 41, column 58) (TCon "Nat" [])))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" [])) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []))) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))))),Pos "pi-tests/NewProofs.pi" (line 9, column 12) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 15) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 9, column 24) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 29) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 9, column 38) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 43) (Pi Rel (Var 1@0) (<_1> Var 1@0))) (<f> Pos "pi-tests/NewProofs.pi" (line 9, column 54) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 57) (Var 2@0)) (<x> Pos "pi-tests/NewProofs.pi" (line 9, column 63) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 9, column 66) (Var 3@0)) (<y> Pos "pi-tests/NewProofs.pi" (line 9, column 72) (Pi Rel (TyEq (Var 1@0) (Var 0@0)) (<_2> TyEq (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 2@0})) (App (Var 3@0) (Arg {argEp = Rel, unArg = Var 1@0})))))))))))))),Type,Type,Pi Rel (Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" [])) (<_1> Pos "pi-tests/NewProofs.pi" (line 41, column 58) (TCon "Nat" [])),TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 41, column 52) (TCon "Nat" []),TCon "Nat" [],TCon "Nat" [],TyEq (Var n89) (Var m91),TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))}],Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))) (<_> TCon "Void" []),TCon "Void" [],Pi Rel (Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var n89) (Var m91))) (<_> TCon "Void" []),Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Pos "pi-tests/NewProofs.pi" (line 42, column 64) (Var n89)) (Pos "pi-tests/NewProofs.pi" (line 42, column 68) (Var m91)))),Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 42, column 64) (Var n89)}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 42, column 68) (Var m91)}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Pos "pi-tests/NewProofs.pi" (line 42, column 64) (Var n89)) (Pos "pi-tests/NewProofs.pi" (line 42, column 68) (Var m91)))))),Pos "pi-tests/NewProofs.pi" (line 28, column 33) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" [])) (<right> Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 42, column 64) (Var n89)}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Pos "pi-tests/NewProofs.pi" (line 42, column 64) (Var n89)) (Var 1@0))))))),Pos "pi-tests/NewProofs.pi" (line 28, column 17) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 25) (TCon "Nat" [])) (<left> Pos "pi-tests/NewProofs.pi" (line 28, column 33) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 28, column 42) (TCon "Nat" [])) (<right> Pos "pi-tests/NewProofs.pi" (line 28, column 50) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 28, column 55) (TyEq (DCon "Succ" [Arg {argEp = Rel, unArg = Var 1@0}]) (DCon "Succ" [Arg {argEp = Rel, unArg = Var 0@0}]))) (<p> Pos "pi-tests/NewProofs.pi" (line 28, column 82) (Pos "pi-tests/NewProofs.pi" (line 28, column 83) (TyEq (Var 2@0) (Var 1@0))))))))),TCon "Nat" [],TCon "Nat" [],Pos "pi-tests/NewProofs.pi" (line 33, column 43) (TyEq (Var a85) (Var b86))])], 
+
+
+
+[Module {moduleName = "NewProofs", moduleImports = [], moduleEntries = [TypeSig (Sig {sigName = pred, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 23, column 8) (Pi Rel (TCon "Nat" []) (<_> TCon "Nat" []))}),
+
+Def pred ((Lam Rel (<n> (Case (((Var 0@0))) 
+    [
+        Match (<(PatCon "Zero" [])> ((DCon "Zero" []))),
+        Match (<(PatCon "Succ" [(PatVar m,Rel)])> ((Var 0@0)))
+    ]))),
+[Pi Rel (TCon "Nat" []) (<_> TCon "Nat" []),TCon "Nat" [],TCon "Nat" [],TCon "Nat" []])],
+
+moduleConstructors = ConstructorNames {tconNames = fromList ["Bool","List","Nat","Sigma","Unit"], dconNames = fromList ["()","Cons","False","Nil","Prod","Succ","True","Zero"]}}]
+
+
+[Module {moduleName = "NewProofs", moduleImports = [], moduleEntries = [Data "Maybe" (Telescope [TypeSig (Sig {sigName = A, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 3, column 17) Type})]) [ConstructorDef "pi-tests/NewProofs.pi" (line 4, column 3) "Nothing" (Telescope []),ConstructorDef "pi-tests/NewProofs.pi" (line 5, column 3) "Just" (Telescope [TypeSig (Sig {sigName = _, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 5, column 12) (Var A)})])],TypeSig (Sig {sigName = f, sigEp = Rel, sigType = Pos "pi-tests/NewProofs.pi" (line 48, column 5) (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_1> Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}])))}),
+
+
+RecDef f (Lam Rel (<a> Lam Rel (<b> (Case (((Var 1@0))) [
+    Match (<(PatCon "Nothing" [])> ((Case (((Var 1@0))) [
+        Match (<(PatCon "Nothing" [])> ((DCon "Nothing" []))),
+        Match (<(PatCon "Just" [(PatVar g,Rel)])> ((DCon "Nothing" [])))]))),
+    Match (<(PatCon "Just" [(PatVar g,Rel)])> ((Case (((Var 1@0))) [
+        Match (<(PatCon "Nothing" [])> ((DCon "Nothing" []))),
+        Match (<(PatCon "Just" [(PatVar h,Rel)])> ((Case (((App (App (Var f) (Arg {argEp = Rel, unArg = DCon "Nothing" []})) (Arg {argEp = Rel, unArg = DCon "Nothing" []})))) [
+            Match (<(PatCon "Nothing" [])> ((DCon "Nothing" []))),
+            Match (<(PatCon "Just" [(PatVar jj,Rel)])> (TrustMe))])))])))])))),
+            
+[Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_1> Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}])), lam a
+Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]), lam b
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], scrut a
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], scrut b
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Nothing -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Just -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], scrut b
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Nothing -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Just -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}],
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]])]
+
+[
+Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_1> Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}])), lam a
+Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]), lam b
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}],scrut a
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Nothing -> return
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Just -> Nothing  
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], scrut b
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Nothing -> nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Just -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], return App
+Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]), Inner App
+Pos "pi-tests/NewProofs.pi" (line 52, column 5) (Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_1> Pi Rel (TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]) (<_2> TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]))), outer app
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], arg 1
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], arg 2
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}], Just -> Nothing
+TCon "Maybe" [Arg {argEp = Rel, unArg = TCon "Bool" []}]])] Nothing -> Nothing
+
+Def xNotInNilV (Lam Irr (<A> Lam Irr (<n> Lam Irr (<x> Lam Rel (<p> (Case (((Var 0@0))) [])))))),
+
+[Pi Irr (Type) (<A> (Pi Irr ((TCon "Nat" [])) (<n> (Pi Irr ((Var 1@0)) (<x> (Pi Rel ((TCon "ElemVec" [Arg {argEp = Rel, unArg = Var 2@0},Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Var 0@0},Arg {argEp = Rel, unArg = DCon "NilV" []}])) (<p> (TCon "Void" [])))))))),
+
+Pi Irr (Pos "pi-tests/NewProofs.pi" (line 60, column 33) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 60, column 41) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 60, column 46) (Var A8)) (<x> Pos "pi-tests/NewProofs.pi" (line 60, column 52) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 60, column 57) (TCon "ElemVec" [Arg {argEp = Rel, unArg = Var A8},Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Var 0@0},Arg {argEp = Rel, unArg = DCon "NilV" []}])) (<p> Pos "pi-tests/NewProofs.pi" (line 60, column 80) (TCon "Void" [])))))),
+
+Pi Irr (Pos "pi-tests/NewProofs.pi" (line 60, column 46) (Var A8)) (<x> Pos "pi-tests/NewProofs.pi" (line 60, column 52) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 60, column 57) (TCon "ElemVec" [Arg {argEp = Rel, unArg = Var A8},Arg {argEp = Rel, unArg = Var n9},Arg {argEp = Rel, unArg = Var 0@0},Arg {argEp = Rel, unArg = DCon "NilV" []}])) (<p> Pos "pi-tests/NewProofs.pi" (line 60, column 80) (TCon "Void" [])))),
+
+Pi Rel (Pos "pi-tests/NewProofs.pi" (line 60, column 57) (TCon "ElemVec" [Arg {argEp = Rel, unArg = Var A8},Arg {argEp = Rel, unArg = Var n9},Arg {argEp = Rel, unArg = Var x10},Arg {argEp = Rel, unArg = DCon "NilV" []}])) (<p> Pos "pi-tests/NewProofs.pi" (line 60, column 80) (TCon "Void" [])),
+
+(TCon "ElemVec" [Arg {argEp = Rel, unArg = Var A8},Arg {argEp = Rel, unArg = Var n9},Arg {argEp = Rel, unArg = Var x10},Arg {argEp = Rel, unArg = DCon "NilV" []}])])]
+
+_IO<_Unit> main2 = []() {
+    auto _1131 = []() { 
+        auto _1139 = _Nat::_Zero();
+        auto _1138 = _Nat::_Succ(_1139);
+        auto _1135 = _Nat::_Succ(_1138);
+        auto _1143 = _Nat::_Zero();
+        auto _1140 = _Nat::_Succ(_1143);
+        auto _1141 = _Nat::_NilV();
+        auto _1136 = _Nat::_ConsV(_1140,_1141);
+        auto _1133 = _Nat::_ConsV(_1135,_1136);
+
+        [(Pi Irr ((TCon "Nat" [])) (<n> (Pi Rel ((TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Var 0@0}])) ((TCon "Dec" [Arg {argEp = Rel, unArg = (TCon "UniqueVec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Var 0@0}])}]))))),
+        
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])}],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}])}],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Nat" [],
+        TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = (DCon "Zero" [])}],
+        
+        TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}],Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]),Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 643, column 14) (TCon "Unit" [])}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]))),Pos "pi-tests/NewProofs.pi" (line 327, column 22) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 643, column 14) (TCon "Unit" [])}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))),Pos "pi-tests/NewProofs.pi" (line 327, column 8) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 13) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 327, column 22) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))))),Type,Type,Pos "pi-tests/NewProofs.pi" (line 360, column 7) (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}]),Pos "pi-tests/NewProofs.pi" (line 360, column 7) (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}])]
+        
+        auto _1132 = decUniqueVec(_1133); 
+        
+        switch (   _1132.type) {  
+            case Yes: {
+                auto _1145 = *(_Dec_Yes<_UniqueVec<_Nat>>*)_1132.data;
+                auto pf1 = _1145._1;
+                auto _1146 = end;
+                auto _1147 = end;
+        
+        
+        [Pos "pi-tests/NewProofs.pi" (line 327, column 22) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 643, column 14) (TCon "Unit" [])}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))),Pos "pi-tests/NewProofs.pi" (line 327, column 8) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 13) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 327, column 22) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))))),Type,Type,Pos "pi-tests/NewProofs.pi" (line 360, column 7) (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}]),Pos "pi-tests/NewProofs.pi" (line 360, column 7) (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}])]
+                
+                auto _1144 = bind<_Unit>(_1146)(_1147);
+                return _1144;
+                }
+        } 
+    }(); 
+    return _1131;
+}();
+
+
+Def main2 
+
+((Case ((
+    (App 
+        (App 
+            (Var decUniqueVec) 
+            (Arg {argEp = Irr, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])})
+        )
+        (Arg {argEp = Rel, unArg = (DCon "ConsV" [Arg {argEp = Irr, unArg = (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}])},Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}]},Arg {argEp = Rel, unArg = (DCon "ConsV" [Arg {argEp = Irr, unArg = (DCon "Zero" [])},Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]},Arg {argEp = Rel, unArg = DCon "NilV" []}])}])})
+    )))
+
+ [Match (<(PatCon "Yes" [(PatVar pf1,Rel)])> ((App (App (App (App (Var bind) (Arg {argEp = Irr, unArg = (TCon "Unit" [])})) (Arg {argEp = Irr, unArg = (TCon "Unit" [])})) (Arg {argEp = Rel, unArg = (Var end)})) (Arg {argEp = Rel, unArg = Var end}))))]),
+ 
+ 
+ 
+ [
+    (TCon "Dec" [Arg {argEp = Rel, unArg = (TCon "UniqueVec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 28) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 32) (DCon "ConsV" [Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}])},Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}]},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 45) (DCon "ConsV" [Arg {argEp = Irr, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 52) (DCon "Zero" [])},Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]},Arg {argEp = Rel, unArg = DCon "NilV" []}])}])}])}]),
+    
+    (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 275, column 34) (TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 28) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])}])) (<v> Pos "pi-tests/NewProofs.pi" (line 275, column 48) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 275, column 53) (TCon "UniqueVec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 28) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])},Arg {argEp = Rel, unArg = Var 0@0}])}]))),
+    
+    (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 275, column 21) (TCon "Nat" [])) (<n> Pos "pi-tests/NewProofs.pi" (line 275, column 29) (Pi Rel (Pos "pi-tests/NewProofs.pi" (line 275, column 34) (TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Var 0@0}])) (<v> Pos "pi-tests/NewProofs.pi" (line 275, column 48) (TCon "Dec" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 275, column 53) (TCon "UniqueVec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Var 1@0},Arg {argEp = Rel, unArg = Var 0@0}])}]))))),
+    
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 28) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}]}])}],
+    
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 39) (DCon "Succ" [Arg {argEp = Rel, unArg = DCon "Zero" []}])}],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Nat" [],
+    TCon "Vec" [Arg {argEp = Rel, unArg = TCon "Nat" []},Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 639, column 52) (DCon "Zero" [])}],
+    TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}],
+    
+    Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]),
+    
+    (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 643, column 14) (TCon "Unit" [])}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 644, column 14) (TCon "Unit" [])}]))),
+    
+    (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Pos "pi-tests/NewProofs.pi" (line 643, column 14) (TCon "Unit" [])}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))),
+    
+    (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 13) Type) (<A> Pos "pi-tests/NewProofs.pi" (line 327, column 22) (Pi Irr (Pos "pi-tests/NewProofs.pi" (line 327, column 27) Type) (<B> Pos "pi-tests/NewProofs.pi" (line 327, column 36) (Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_86> Pi Rel (TCon "IO" [Arg {argEp = Rel, unArg = Var 1@0}]) (<_87> TCon "IO" [Arg {argEp = Rel, unArg = Var 2@0}]))))))),
+    
+    Type,
+    Type,
+    (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}]),
+    (TCon "IO" [Arg {argEp = Rel, unArg = TCon "Unit" []}])
+])
+
+enum _enum_Dec_type { Yes, No };
+template <class prop>
+class _Dec_Yes;
+template <class prop>
+class _Dec_No;
+
+template <class prop>
+class _Dec {
+ public:
+  enum _enum_Dec_type type;
+  void* data;
+  static _Dec<prop> _Yes(prop _1);
+  static _Dec<prop> _No(std::function<_Void(prop)> _1);
+  _Dec<prop>(_enum_Dec_type t, void* d) {
+    type = t; 
+    data=d;
+  }
+  _Dec<prop>(const _Dec<prop>& other)
+  {
+    std::cout << "Called" << std::endl;
+    type = other.type;
+    switch(other.type) {
+      case Yes: {
+        auto a = *(_Dec_Yes<prop>*)other.data;
+        data = other.data;
+      }
+      case No: {
+        auto a = *(_Dec_No<prop>*)other.data;
+        data = other.data;
+      }
+    }
+  }
+  
+};
+template <class prop>
+class _Dec_Yes {
+ public:
+  prop _1;
+  _Dec_Yes(prop _1) { this->_1 = _1; };
+};
+template <class prop>
+class _Dec_No {
+ public:
+  std::function<_Void(prop)> _1;
+  _Dec_No(std::function<_Void(prop)> _1) { this->_1 = _1; };
+};
+template <class prop>
+inline _Dec<prop> _Dec<prop>::_Yes(prop _1) {
+  _Dec_Yes<prop>* _innerClass = new _Dec_Yes<prop>(_1);
+  return _Dec<prop>(Yes, _innerClass);
+};
+template <class prop>
+inline _Dec<prop> _Dec<prop>::_No(std::function<_Void(prop)> _1) {
+  _Dec_No<prop>* _innerClass = new _Dec_No<prop>(_1);
+  return _Dec<prop>(No, _innerClass);
+};
+//template <class prop>
+//_Dec<prop> operator=(_Dec<prop> other)
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+auto _912 = y;
+auto _913 = ys;
+auto _914 = pf;
+auto _917 = currChid;
+auto _918 = consumerChid;
+auto _919 = currChannel;
+auto _920 = consumerChannel;
+auto _921 = f;
+auto _908 = spawnAndRun2(_912)(_913)(_914)([_917, _918, _919, _920, _921](){auto a = workerWrapper<A>(_917)(_918)(_919)(_920)(_921);});

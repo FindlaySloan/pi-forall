@@ -104,7 +104,7 @@ translateModuleEntries (decl:decls) = do
 
 -- TODO TODO TODO FIX THIS MESS
 shouldReplaceFunc :: String -> Bool
-shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun"]
+shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun", "print", "natToString"]
 replaceFunc :: String -> String
 replaceFunc name
   | name == "channelDequeue" = 
@@ -157,7 +157,7 @@ replaceFunc name
           \auto _721 = [pid, pidSet](auto proc) {\
           \// Spawning the thread\n\
             \try {\
-                \std::thread* t = new std::thread([proc](){proc;});\
+                \std::thread* t = new std::thread([proc](){proc();});\
 
                 \addThread(intFromNat(pid), t);\
 
@@ -192,6 +192,37 @@ replaceFunc name
       \};\
       \return _719;\
     \}"
+  | name == "print" = 
+      "[](auto l) {\
+        \auto _653 = [l]() {\
+        \auto _654 = l;\
+        \switch (_654.type) {\
+          \case Nil: {\
+            \std::cout << \"\\n\" << std::flush;\
+            \return returnIO<_Unit>(_Unit::_unit());\
+          \}\
+          \case Cons: {\
+            \auto _660 = *(_List_Cons<char>*)_654.data;\
+            \auto c = _660._1;\
+            \auto cs = _660._2;\
+            \std::cout << c;\
+            \return print(cs);\
+          \}\
+        \}\
+        \}();\
+        \return _653;\
+      \}"
+  | name == "natToString" = 
+     "[](auto n) {\
+  \std::string stringVersion = std::to_string(intFromNat(n));\
+  \std::function<_List<char>(std::string)> toList = [&toList](std::string s) {\
+    \if (s.empty()) {\
+      \return _List<char>::_Nil();\
+    \}\
+    \return _List<char>::_Cons(s.at(0), toList(std::string(s).erase(0, 1)));\
+  \};\
+  \return toList(stringVersion);\
+\}"
 
 -- Translating a single module entry
 translateModuleEntry :: Decl -> State TranslatorState InterDef
@@ -796,8 +827,16 @@ generateFunctionImplFromApp (FunctionImpl name argNames lines) t args = do
                                                             put (interDefs, varNumber, varStack, captureStack, drop (numberToDrop term 0) typeStack, decls)
                                                             return $ FunctionImpl name argNames []
                                                           Rel -> (generateFunctionImpl (FunctionImpl name argNames []) term)) (reverse $ args)
-  -- (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get                                                        
-  return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines ) -- ++ [(show $ head $ drop ((length args) - 1) res)])
+  (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get
+  case (last $ words $ concat $ cLines interDefForTerm) of
+    "spawnAndRun" -> do
+      let newLines = ({--"auto " ++ syntheticVar ++ " = " ++ " " ++ --}(concat functionCall)) : lines
+          functionCall = (cLines interDefForTerm) ++ [templateInfo] ++  [argsAsString]
+          argsAsString = (concat $ map (\s ->  "(" ++ s ++ ")") (take ((length argSyntheticVars) - 1) argSyntheticVars)) ++ innerFunc
+          innerFunc =  "([" ++ (concat $ intersperse "," captureStack) ++  "](){" ++ (concat $ intersperse ";" $ cLines $ last interDefsForArgs) ++ ";})"
+      return $ FunctionImpl name argNames ((concat $ map (cLines) (take ((length interDefsForArgs) - 1) interDefsForArgs)) ++ newLines)
+    _ -> return $ FunctionImpl name argNames ((concat $ map (cLines) interDefsForArgs) ++ newLines ) -- ++ [(show $ head $ drop ((length args) - 1) res)])                                                         
+  
   where
     numberToDrop :: Term -> Int -> Int
     numberToDrop term@(Var _) acc = acc + 1
@@ -839,30 +878,40 @@ generateData :: Decl -> State TranslatorState InterDef
 generateData (Data tcName telescope constructorDefs)
   -- | tcName == "Unit" = return UNDEF
   -- | tcName == "Bool" = return UNDEF
+  | tcName == "Void" = return UNDEF
   | otherwise =  do
   let templates = genTemplateTypes telescope
   let conNames = map (getConName) constructorDefs
   let enumDef =  enumName ++ " {" ++ (concat $ intersperse "," conNames) ++ "};"
   constructorFuncDefs <- mapM (constructorFuncDefsForMainClass tcName templates) constructorDefs
-  let mainClassDef = (genTemplateDef templates) ++ "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data;" ++ (concat constructorFuncDefs) ++ "};"
+  let mainClassDef = (genTemplateDef templates) ++ "class _" ++ tcName ++ " { public: " ++ enumName ++ " type; void* data;" ++ (concat constructorFuncDefs) ++ (defaultConstructors tcName templates conNames) ++ "};"
   conClassDefs <- mapM (conClassDef tcName templates) constructorDefs
+  forwardDeclares <- mapM (forwardDeclareSubClasses tcName templates) constructorDefs
   inlineConstructorDefs <- mapM (inlineConstructorFuncDef tcName templates) constructorDefs
+  let copyConstructors = (genCopyMainCopyConstructor tcName templates conNames)
+  
 --  defs <- conClassDefs
-  return $ DataType tcName conNames ([enumDef, mainClassDef] ++ conClassDefs ++ inlineConstructorDefs)
+  return $ DataType tcName conNames ([enumDef, concat forwardDeclares, mainClassDef, concat conClassDefs, concat inlineConstructorDefs, copyConstructors])
 
   where enumName = "enum _enum_" ++ tcName ++ "_type"
         getConName (ConstructorDef _ conName _) = conName
+        defaultConstructors name templates conNames = "_" ++ name ++ (genTemplateArgs templates) ++ "(_enum_" ++ name ++ "_type t, void* d) {type=t; data=d;} \n_" ++ name ++ (genTemplateArgs templates) ++ "(const " ++ "_" ++ name ++ (genTemplateArgs templates) ++ "& other);\n_" ++ name ++ (genTemplateArgs templates) ++ "() = default;"
         constructorFuncDefsForMainClass name templates c@(ConstructorDef _ conName arg) = do
           attributes <- conClassAttributes c
           return $ "static _" ++ name ++ (genTemplateArgs templates) ++ " _" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ");"
         inlineConstructorFuncDef name templates c@(ConstructorDef _ conName arg) = do
            attributes <- conClassAttributes c
-           return $ (genTemplateDef templates) ++ " inline _" ++ name ++ (genTemplateArgs templates) ++ " _" ++ name ++ (genTemplateArgs templates) ++ "::_" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ")" ++ "{ " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "* _innerClass = new " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "(" ++ (concat $ intersperse ", " $ map (\x -> head $ tail $ words x) attributes) ++ "); return  _" ++ name ++ (genTemplateArgs templates) ++ " { " ++ conName ++ ", _innerClass }; };"
+           return $ (genTemplateDef templates) ++ " inline _" ++ name ++ (genTemplateArgs templates) ++ " _" ++ name ++ (genTemplateArgs templates) ++ "::_" ++ conName ++ "(" ++ (concat $ intersperse ", " attributes) ++ ")" ++ "{ " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "* _innerClass = new " ++ (conType name conName) ++ (genTemplateArgs templates) ++ "(" ++ (concat $ intersperse ", " $ map (\x -> head $ tail $ words x) attributes) ++ "); return  _" ++ name ++ (genTemplateArgs templates) ++ " ( " ++ conName ++ ", _innerClass ); };"
         conType tName conName = "_" ++ tName ++ "_" ++ conName
         conClassDef name templates c@(ConstructorDef _ conName _) = do
           attributes <- conClassAttributes c
           constructor <- genConstructor name c
           return $ (genTemplateDef templates) ++ "class _" ++ name ++ "_" ++ conName ++ " { public: " ++ (concat $ map (\s -> s ++ ";") attributes) ++ constructor ++ " };"
+        forwardDeclareSubClasses name templates c@(ConstructorDef _ conName _) = do
+          attributes <- conClassAttributes c
+          constructor <- genConstructor name c
+          return $ (genTemplateDef templates) ++ "class _" ++ name ++ "_" ++ conName ++ ";\n"
+
         conClassAttributes (ConstructorDef _ _ (Telescope decls)) = genConAttributes decls 0 []
         genConAttributes [] _ acc = return $ acc
         genConAttributes (decl:decls) number acc = let var = getVarName (number + 1)
@@ -875,11 +924,17 @@ generateData (Data tcName telescope constructorDefs)
                                                         _             -> genConAttributes decls number acc -- Ignoring as it
         genConstructor tcName c@(ConstructorDef _ conName args) = do
             attributes <- conClassAttributes c
-            return $ (conType tcName conName) ++ " (" ++ (concat $ intersperse ", " attributes) ++ ") {" ++ (concat $ map (\x -> let y = head $ tail $ words x in "this->" ++ y ++ "= " ++ y ++ ";") attributes) ++ "};"
+            return $ (conType tcName conName) ++ " (" ++ (concat $ intersperse ", " attributes) ++ ") {" ++ (concat $ map (\x -> let y = head $ tail $ words x in "this->" ++ y ++ "= " ++ y ++ ";") attributes) ++ "};" ++ (conType tcName conName) ++ " (const " ++ (conType tcName conName) ++  "& other) { " ++ (concat $ map (\x -> let y = head $ tail $ words x in "this->" ++ y ++ "= other." ++ y ++ ";") attributes) ++  "}" 
+        genCopyMainCopyConstructor name templates conNames=
+          (genTemplateDef templates) ++ "_" ++ name ++ (genTemplateArgs templates) ++ "::_" ++ name ++ "(const " ++ "_" ++ name ++ (genTemplateArgs templates) ++ "& other) { type = other.type; switch(other.type) {" ++ (concat $ map (genConCaseInCopyConstructor name templates) conNames) ++ "} } "
+        genConCaseInCopyConstructor name templates conName = 
+          "case " ++ conName ++ ": { auto d = *(_" ++ name ++ "_" ++ conName ++ (genTemplateArgs templates) ++ "*)other.data; auto ret = new _" ++ name ++ "_" ++ conName ++ (genTemplateArgs templates) ++ "(d); data = ret; break;}"
         genTemplateTypes (Telescope decls) = foldr (\(TypeSig (Sig name e t)) acc -> case e of
                                                                                         Irr -> acc -- Irrelevant so ignore
                                                                                         Rel -> relInner (Unbound.name2String name) acc t
                                                    ) [] decls
+        genConAssigmentCase name templates conName = 
+          "case " ++ conName ++ ": { std::swap(*(_" ++ name ++ "_" ++ conName ++ (genTemplateArgs templates) ++ "*)data,*(_" ++ name ++ "_" ++ conName ++ (genTemplateArgs templates) ++ "*)other.data); break;}"
         relInner :: String -> [String] -> Type -> [String]
         relInner name acc (Pos _ t) = relInner name acc t
         relInner name acc (Ann t _) = relInner name acc t

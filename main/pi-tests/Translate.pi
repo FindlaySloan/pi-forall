@@ -2,52 +2,14 @@ module Translate where
 
 data Void : Type where {}   -- no constructors
 
-Not : Type -> Type
-Not = \a . (a -> Void)
+-- Not : Type -> Type
+-- Not = \a . (a -> Void)
 
 data Dec (a : Type) : Type where
   Yes of (prf : a)
-  No  of (prop : Type) (cont : Not prop) [a=prop]
+  No  of (prop : Type) (cont : prop -> Void) [a=prop]
 
 sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
 sym = \ [A] [x] [y] pf .
   subst Refl by pf
-
-f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
-f_equal = \[A][B][f][x][y] pf .
-  subst Refl by pf
-
-pred : Nat -> Nat
-pred = \n . case n of
-    Zero -> Zero
-    Succ n -> n
-
-
-succInjective : (left : Nat) -> (right : Nat) -> (p : Succ left = Succ right) -> left = right
-succInjective = \left right p .
-  f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p
-
-contraSuccInjective : (left : Nat) -> (right : Nat) -> (p : left = right -> Void) -> Succ left = Succ right -> Void
-contraSuccInjective = \l r p pf .
-    p (succInjective l r pf)
-
-negEqSym : (t : Type) -> (a : t) -> (b : t) -> (a = b -> Void) -> (b = a -> Void)
-negEqSym = \t a b p h . p (sym [t] [b] [a] h)
-
-
-
-ZnotS : (y : Nat) -> Zero = (Succ y) -> Void
-ZnotS = \y pf2 . contra pf2
-
-decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
-decEqNat = \a b . 
-  case a of
-     Zero -> case b of
-               Zero -> Yes Refl
-               Succ n -> No (Zero = Succ n) (ZnotS n)
-     Succ n -> case b of
-                Zero -> No (Succ n = Zero) (negEqSym Nat Zero (Succ n) (ZnotS n))
-                Succ m -> case (decEqNat n m) of
-                           Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
-                           No t p -> No (Succ n = Succ m) (\h . p (succInjective n m h))
 

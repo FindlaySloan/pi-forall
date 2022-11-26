@@ -20,6 +20,15 @@ tail = \ [A][n] x.  case x of
      -- NilV case impossible
      ConsV [m] y ys -> ys
 
+-- Function to turn a Nat to String
+natToString : Nat -> List Char
+natToString = TRUSTME
+
+map : [a : Type] -> [b: Type] -> (a -> b) -> List a -> List b 
+map = \[a] [b] f xs . case xs of 
+  Nil -> Nil
+  Cons y ys -> Cons (f y) (map [a][b] f ys)
+
 -- Void type
 
 data Void : Type where {}
@@ -99,6 +108,29 @@ plus = \ n m .
   case n of
     Zero -> m
     Succ pred -> Succ (plus pred m)
+
+mult : Nat -> Nat -> Nat
+mult = \ n m .
+  case n of
+    Zero -> Zero
+    Succ pred -> plus m (mult pred m)
+
+
+minus : Nat -> Nat -> Nat
+minus = \n m .
+   case n of
+     Zero -> Zero
+     Succ p -> case m of
+                    Zero -> n
+                    Succ mpred -> minus p mpred
+
+fib : Nat -> Nat
+fib = \ x . 
+  case x of
+    Zero -> 1
+    Succ y -> case y of
+      Zero -> 1
+      Succ z -> plus (fib y) (fib z) 
 
 append : [A :Type] ->[m:Nat] -> [n:Nat] -> Vec A m -> Vec A n -> Vec A (plus m n)
 append = \[A] [m] [n] v1 ys . case v1 of 
@@ -327,8 +359,13 @@ bindEq = \ [A] [B] a f . case a of
 bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
 bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
 
--- print : List Char -> IO Unit
--- print = TRUSTME -- TODO add print
+print : List Char -> IO Unit
+print = TRUSTME
+
+printList : List (List Char) -> IO Unit
+printList = \ l . case l of
+  Nil -> returnIO [Unit] ()
+  Cons x xs -> bind [Unit] [Unit] (print x) (printList xs)
 
 -- Concurrency Primatives
 
@@ -402,6 +439,25 @@ producerWrapper = \ [A] id ch list .
         Nil         -> bind [Unit] [Unit] (send [A] id Nothing ch) (end)
         Cons x xs   -> bind [Unit] [Unit] (send [A] id (Just x) ch) (producerWrapper [A] id ch xs)
 
+propgateTermination : [A : Type] -> [n : Nat] -> (Vec ({id : Nat | Channel A id}) n) -> IO Unit
+propgateTermination = \ [A] [n] chs . 
+  case chs of
+    NilV -> end -- Finished propgating
+    ConsV [m] ch restChs -> 
+      let (chid, channel) = ch in
+      bind [Unit] [Unit] (send [A] chid Nothing channel) (propgateTermination [A] [m] restChs)
+
+farmProducerWrapper : [A : Type] -> [n : Nat] -> [m : Nat] -> (Vec ({id : Nat | Channel A id}) n) -> (Vec ({id : Nat | Channel A id}) m) -> List A -> IO Unit
+farmProducerWrapper = \ [A] [n] [m] allChs chs list .
+  case list of
+    Nil       -> propgateTermination [A] [n] allChs-- PROPOGATE TERMINATION 
+    Cons x xs -> case chs of -- Splitting on chs to get ch to send on
+      NilV -> -- Reset with allChs
+        farmProducerWrapper [A] [n] [n] allChs allChs list
+      ConsV [mDash] ch restChs ->
+        let (chid, channel) = ch in
+        bind [Unit] [Unit] (send [A] chid (Just x) channel) (farmProducerWrapper [A] [n] [mDash] allChs restChs xs)
+
 workerWrapper : [A : Type] -> (receiveId : Nat) -> (sendId : Nat) -> Channel A receiveId  -> Channel A sendId -> (f : A -> A) ->  IO Unit
 workerWrapper = \ [A] receiveId sendId receiveChannel sendChannel f.
     bindEq [Maybe A] [Unit] 
@@ -412,21 +468,24 @@ workerWrapper = \ [A] receiveId sendId receiveChannel sendChannel f.
           Just x  -> bind [Unit] [Unit] (send [A] sendId (Just (f x)) sendChannel) (workerWrapper [A] receiveId sendId receiveChannel sendChannel f)
     )
 
-consumerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> IO (List A)
-consumerWrapper = \ [A] chid ch .
-    bindEq [Maybe A] [List A] 
-    (receive [A] chid ch)
-    (\ mx .
-      case mx of
-        Nothing -> 
-          returnIO [List A] Nil
-        Just x  -> 
-          bindEq [List A] [List A] 
-          (consumerWrapper [A] chid ch) 
-          (\ res . 
-            returnIO [List A] (Cons x res)
-          )
-    )
+farmConsumerWrapper : [A : Type] -> (chid : Nat) -> Channel A chid -> (numLeft : Nat)-> IO (List A)
+farmConsumerWrapper = \ [A] chid ch numLeft.
+    case numLeft of
+      Zero -> returnIO [List A] Nil
+      Succ n ->
+        bindEq [Maybe A] [List A] 
+        (receive [A] chid ch)
+        (\ mx .
+          case mx of
+            Nothing -> 
+              farmConsumerWrapper [A] chid ch n 
+            Just x  -> 
+              bindEq [List A] [List A] 
+              (farmConsumerWrapper [A] chid ch numLeft) 
+              (\ res . 
+                returnIO [List A] (Cons x res)
+              )
+        )
 
 spawnWorkersFarm : [A : Type]
                 -> (n : Nat) -- The size of the pidSet
@@ -586,7 +645,7 @@ createFarm = \ [A] n pidSet nDash pids pidPf m chidSet mDash chids chidPf numWor
                   [Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ nDashDashDash) | (producerPid = newPid) * ((ConsV [nDashDashDash] producerPid restPids : Vec Nat (Succ nDashDashDash)) = newPidSet) }})]
                   [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
                   -- Spawning the producer
-                  (spawnAndRun producerPid [nDashDashDash] restPids producerPidPf (producerWrapper [A] consumerChid consumerChannel input))
+                  (spawnAndRun producerPid [nDashDashDash] restPids producerPidPf (farmProducerWrapper [A] [mDashDash] [mDashDash] otherChs otherChs input))
                   (\ mres2 . case mres2 of 
                     Nothing ->
                       returnIO
@@ -610,7 +669,7 @@ createFarm = \ [A] n pidSet nDash pids pidPf m chidSet mDash chids chidPf numWor
                           bindEq
                           [List A]
                           [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
-                          (consumerWrapper [A] consumerChid consumerChannel)
+                          (farmConsumerWrapper [A] consumerChid consumerChannel numWorkers)
                           (\ resultantList . 
                             returnIO
                             [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus nDash n) | newPidSet = ((append [Nat] [nDash] [n] pids pidSet) : Vec Nat (plus nDash n))} * {newChidSet : Vec Nat (plus mDash m) | newChidSet = ((append [Nat] [mDash] [m] chids chidSet) : Vec Nat (plus mDash m))})]
@@ -635,16 +694,48 @@ createFarm = \ [A] n pidSet nDash pids pidPf m chidSet mDash chids chidPf numWor
   )
 
 id : Nat -> Nat
-id = \a . a
+id = \a . Succ a
 
-main2 : IO Unit
-main2 = case decUniqueVec [2] (append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of--(ConsV [1] 2 (ConsV [0] 1 NilV)) of--(append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of
-          Yes pf1 ->
-            -- end
-            bind
-            [(Maybe ((List Nat) * (Farm Nat 1) * {newPidSet : Vec Nat (plus 2 0) | newPidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))} * {newChidSet : Vec Nat (plus 2 0) | newChidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))}))]
-            [Unit]
-            (createFarm [Nat] 0 (NilV) 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 0 NilV 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 1 (negEqSym [Nat] [0] [1] (ZnotS 0)) (Refl) (Refl) (id) <1>)
-            end
-          -- No cPf1 -> end
+-- main2 : IO Unit
+-- main2 = bind [Unit] [Unit] (printList (map [Nat] [List Char] natToString <0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10>)) 
+--         (bind [Unit] [Unit] (print "OUTPUT-TIME")
+--         (case decUniqueVec [2] (append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of--(ConsV [1] 2 (ConsV [0] 1 NilV)) of--(append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of
+--           Yes pf1 ->
+--             bindEq
+--             [(Maybe ((List Nat) * (Farm Nat 1) * {newPidSet : Vec Nat (plus 2 0) | newPidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))} * {newChidSet : Vec Nat (plus 2 0) | newChidSet = ((append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) : Vec Nat (plus 2 0))}))]
+--             [Unit]
+--             (createFarm [Nat] 0 (NilV) 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 0 NilV 2 (ConsV [1] 2 (ConsV [0] 1 NilV)) (pf1) 1 (negEqSym [Nat] [0] [1] (ZnotS 0)) (Refl) (Refl) (id) <0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10>)
+--             (\ mres . case mres of
+--               Nothing -> print "RIP"
+--               Just r  -> 
+--                 let (l, rest) = r in
+                
+--                 (printList (map [Nat] [List Char] natToString l))
+                
+--             )))
+--           -- No cPf1 -> end
+--mainmain : IO Unit
+--mainmain = (printList (map [Nat] [List Char] natToString (map [Nat] [Nat] (fib) <20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20>)))
 
+
+main3 : IO Unit
+main3 = bind [Unit] [Unit] (printList (map [Nat] [List Char] natToString <20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20>)) 
+         (bind [Unit] [Unit] (print "OUTPUT-TIME")
+         (case decUniqueVec [3] (append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) of--(ConsV [1] 2 (ConsV [0] 1 NilV)) of--(append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of
+           Yes pf1 ->
+             bindEq
+             [(Maybe ((List Nat) * (Farm Nat 2) * {newPidSet : Vec Nat (plus 3 0) | newPidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat (plus 3 0))} * {newChidSet : Vec Nat (plus 3 0) | newChidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat (plus 3 0))}))]
+             [Unit]
+             (createFarm [Nat] 0 (NilV) 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) (pf1) 0 NilV 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) (pf1) 2 (negEqSym [Nat] [0] [2] (ZnotS 1)) (Refl) (Refl) (fib) <20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20>)
+             (\ mres . case mres of
+               Nothing -> print "RIP"
+               Just r  -> 
+                 let (l, rest) = r in
+              
+                 (printList (map [Nat] [List Char] natToString l))
+                
+             )))
+
+-- 4.3
+-- 3.2
+-- 1.17

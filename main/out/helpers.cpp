@@ -2,13 +2,7 @@
 // GLOBAL STATE AND HELPER FUNCTION //
 //////////////////////////////////////
 
-// map of threads
-std::map<int, std::thread*> pidsMap;
-std::mutex pidMutex;
 
-// map of channels
-std::map<int, void*> channelsMap;
-std::mutex channelMutex;
 
 // Helper functions for pids
 std::thread* getThread(int pid) {
@@ -44,3 +38,4 @@ void addChannel(int chid, LockingCQueue<_Maybe<A>>* queue) {
   // adding the channel
   channelsMap[chid] = queue;
 }
+
