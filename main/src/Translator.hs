@@ -111,7 +111,7 @@ replaceFunc name
     "\
     \[](auto id) {\
   \auto _630 = [id](auto ch) {\
-    \LockingCQueue<_Maybe<A>>* queue = (LockingCQueue<_Maybe<A>>*)getChannel(intFromNat(id));\
+    \LockingCQueue<_Maybe<A>>* queue = (LockingCQueue<_Maybe<A>>*)getChannel(id);\
     
     \auto result = queue->dequeue();\
 
@@ -130,7 +130,7 @@ replaceFunc name
     "[](auto id) {\
     \LockingCQueue<_Maybe<A>>* q = new LockingCQueue<_Maybe<A>>();\
 
-  \addChannel(intFromNat(id), q);\
+  \addChannel(id, q);\
   
   \return _Bool::_True();\
   \}"
@@ -138,7 +138,7 @@ replaceFunc name
       "[](auto id) {\
   \auto _629 = [id](auto x) {\
     \auto _630 = [id, x](auto ch) {\
-      \LockingCQueue<_Maybe<A>>* queue = (LockingCQueue<_Maybe<A>>*)getChannel(intFromNat(id));\
+      \LockingCQueue<_Maybe<A>>* queue = (LockingCQueue<_Maybe<A>>*)getChannel(id);\
 
       \queue->enqueue(x);\
 
@@ -159,30 +159,30 @@ replaceFunc name
             \try {\
                 \std::thread* t = new std::thread([proc](){proc();});\
 
-                \addThread(intFromNat(pid), t);\
+                \addThread(pid, t);\
 
             \} catch (std::system_error) {\
                 \return returnIO<\
-                \_Maybe<_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>>>(\
-                  \_Maybe<_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>>::_Nothing());\
+                \_Maybe<_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>>>(\
+                  \_Maybe<_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>>::_Nothing());\
             \}\    
             \auto _726 = pid;\
             \auto _730 = pid;\
             \auto _731 = pidSet;\
-            \auto _728 = _Vec<_Nat>::_ConsV(_730, _731);\
+            \auto _728 = _Vec<uint64_t>::_ConsV(_730, _731);\
             \auto _733 = _TyEq::_Refl();\
             \auto _734 = _TyEq::_Refl();\
             \auto _729 = _Sigma<_TyEq, _TyEq>::_Prod(_733, _734);\
             \auto _727 =\
-                \_Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>::_Prod(_728, _729);\
+                \_Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>::_Prod(_728, _729);\
             \auto _725 =\
-                \_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>::_Prod(\
+                \_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>::_Prod(\
                     \_726, _727);\
             \auto _723 =\
-                \_Maybe<_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>>::\
+                \_Maybe<_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>>::\
                     \_Just(_725);\
             \auto _722 = returnIO<\
-                \_Maybe<_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>>>(\
+                \_Maybe<_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>>>(\
                 \_723);\
             \return _722;\
           \};\
@@ -214,7 +214,7 @@ replaceFunc name
       \}"
   | name == "natToString" = 
      "[](auto n) {\
-  \std::string stringVersion = std::to_string(intFromNat(n));\
+  \std::string stringVersion = std::to_string(n);\
   \std::function<_List<char>(std::string)> toList = [&toList](std::string s) {\
     \if (s.empty()) {\
       \return _List<char>::_Nil();\
@@ -456,7 +456,9 @@ generateFunctionImpl (FunctionImpl name argNames lines) (LitChar literal) = do
 generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
   (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
   
-  let termType = head typeStack
+  let termType = case head typeStack of 
+                  (Pos _ t) -> t
+                  t -> t 
   let res = typeStack
   let termSyntheticVar = getVarName $ varNumber + 1 -- Generating the variable for the scrutinised term
   start <- case varStack of
@@ -497,7 +499,40 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
         --   falseInterDef <- generateFunctionImpl (FunctionImpl name argNames []) falseTerm
         --   let line = start ++ "[" ++ (concat $ intersperse "," captureStack) ++ "]() {" ++ (concat $ cLines termInterDef) ++ "; if ( " ++ termSyntheticVar ++ " ) {" ++ (concat $ intersperse "," (cLines trueInterDef)) ++ ";return " ++ returnSyntheticVar ++ "; } else {" ++ (concat $ intersperse "," (cLines falseInterDef)) ++ ";return " ++ returnSyntheticVar ++ ";} }()"
         --   return $ FunctionImpl name argNames (line : lines)
+        (TCon "Nat" _) -> do
+          let [(Match bnd1), (Match bnd2)] = matches
+          let (patBnd1, term1) = unsafeUnbind bnd1
+          let (patBnd2, term2) = unsafeUnbind bnd2
+          let zeroTerm = case patBnd1 of
+                          (PatCon "Zero" [])  -> term1
+                          (PatCon "Succ" [(PatVar t, _)]) -> term2
+          let succTerm = case patBnd1 of
+                          (PatCon "Zero" [])  -> term2
+                          (PatCon "Succ" [(PatVar t, _)]) -> term1
+          let succVariable = case patBnd1 of
+                              (PatCon "Zero" [])  -> case patBnd2 of
+                                                      (PatCon "Zero" [])  -> "_asdf"
+                                                      (PatCon "Succ" [(PatVar t, e)]) -> case e of
+                                                                                          Irr -> "_asdf"
+                                                                                          Rel -> Unbound.name2String t
+                              (PatCon "Succ" [(PatVar t, e)]) -> case e of
+                                                                  Irr -> "_asdf"
+                                                                  Rel -> Unbound.name2String t
+          (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
+          let returnSyntheticVar = getVarName $ varNumber + 1
+          put (interDefs, varNumber + 1, returnSyntheticVar : tail varStack, captureStack, typeStack, decls) -- Updating the stack, adding the return var and taking off the term var
+          zeroInterDef <- generateFunctionImpl (FunctionImpl name argNames []) zeroTerm
+          (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
+          put (interDefs, varNumber, returnSyntheticVar : varStack, captureStack, typeStack, decls) -- Updating the stack
+          succInterDef <- generateFunctionImpl (FunctionImpl name argNames []) succTerm
+          (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
+          put (interDefs, varNumber, varStack, delete succVariable captureStack, typeStack, decls) -- Updating the stack
+          (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state
+          let prevLine = "auto " ++ succVariable ++ " = " ++ termSyntheticVar ++ " - 1;"; 
+          let line = start ++ "[" ++ (concat $ intersperse "," captureStack) ++ "]() {" ++ (concat $ cLines termInterDef) ++ "; if ( !" ++ termSyntheticVar ++ " ) {" ++ (concat $ intersperse ";" (cLines zeroInterDef)) ++ ";return " ++ returnSyntheticVar ++ "; } else {" ++ prevLine ++ (concat $ intersperse ";" (cLines succInterDef)) ++ ";return " ++ returnSyntheticVar ++ ";} }()"
+          return $ FunctionImpl name argNames (line : lines)
         _      -> do
+          --unsafeCoerce $ unsafePerformIO $ putStrLn $ show termType
           matchesInterDefs <- mapM (generateFunctionImplForMatch termType) matches
           (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state to remove the term Synthetic var from stack
           put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls) -- Updating the stack
@@ -512,8 +547,8 @@ generateFunctionImpl f@(FunctionImpl name argNames lines) t@(DCon conName args) 
   case conName of
     -- "True"  -> generateFunctionImplForBoolLiteral f t
     -- "False" -> generateFunctionImplForBoolLiteral f t
-    -- "Zero"  -> generateFunctionImplForNatLiteral f t
-    -- "Succ"  -> generateFunctionImplForNatLiteral f t
+    "Zero"  -> generateFunctionImplForNatLiteral f t
+    "Succ"  -> generateFunctionImplForNatLiteral f t
     _       -> do
       (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
       start <- case varStack of
@@ -709,7 +744,7 @@ generateFunctionImplForPattern (PatCon name args) scrutType = do
     generateTemplate (TCon name args) =
       case name of
         -- "Bool" -> return "bool" -- Special case for the boolean structure
-        -- "Nat"  -> return "_Nat"  -- Special case for the natural structure
+        "Nat"  -> return "uint64_t"  -- Special case for the natural structure
         -- "Unit"  -> return "void"  -- Special case for Unit
         _      -> do
           (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get -- Getting new state
@@ -782,10 +817,22 @@ generateFunctionImplForNatLiteral (FunctionImpl name argNames lines) t = do
              -- Updateing state
              put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls)
              return $ "auto " ++ syntheticVar ++ " = "
-  let number = case isNumeral t of
-                Nothing -> undefined
-                Just x  -> x
-  return $ FunctionImpl name argNames (( start ++ (show number)) : lines)
+  case isNumeral t of
+                Nothing -> do
+                  -- Generate synthetic var
+                  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+                  let innerTermVar = getVarName $ varNumber + 1
+                  put (interDefs, varNumber + 1, innerTermVar : varStack, captureStack, tail typeStack, decls) -- DROP 1 as SUCC
+                  -- Interdef for term
+                  let innerTerm = case t of
+                                    (DCon "Succ" [arg]) -> unArg arg
+                                    _ -> undefined -- Should never be Zero
+                  interDefForTerm <- generateFunctionImpl (FunctionImpl name argNames []) innerTerm
+                  return $ FunctionImpl name argNames ((concat $ intersperse ";" $ cLines interDefForTerm) : (start ++ innerTermVar ++ " + 1;") : lines)
+                Just x  -> do
+                  (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state -- TODO REFACTOR THIS OUT
+                  put (interDefs, varNumber, varStack, captureStack, drop (x+1) typeStack, decls)
+                  return $ FunctionImpl name argNames ((start ++ "(uint64_t)" ++ (show x)) : lines)
 
 -- | This function will take a squashed Application and then generated the structure to represent it. There
 -- | should only be a couple cases for this as the term in the application must be a function, so either a
@@ -955,9 +1002,9 @@ generateCType (Pi ep tyA bnd) = do
 generateCType (TCon name args) = 
   case name of
     -- "Bool" -> return "bool" -- Special case for the boolean structure
-  --  "Nat"  -> return "int"  -- Special case for the natural structure
+    "Nat"  -> return "uint64_t"  -- Special case for the natural structure
     -- "Unit" -> return "void"
-    _      -> do
+    _     -> do
       (interDefs, varNumber, varStack , captureStack, typeStack, decls) <- get -- Getting new state
       case filter (\(Data tcName _ _) -> tcName == name) [x | x@(Data tcName telescope constructorDefs) <- decls] of
         [] -> undefined

@@ -5,7 +5,7 @@
 
 
 // Helper functions for pids
-std::thread* getThread(int pid) {
+std::thread* getThread(uint64_t pid) {
   // Aquiring the lock
   std::lock_guard<std::mutex> lock(pidMutex);
 
@@ -13,7 +13,7 @@ std::thread* getThread(int pid) {
   return pidsMap[pid];
 }
 
-void addThread(int pid, std::thread* t) {
+void addThread(uint64_t pid, std::thread* t) {
   // Aquiring the lock
   std::lock_guard<std::mutex> lock(pidMutex);
 
@@ -22,7 +22,7 @@ void addThread(int pid, std::thread* t) {
 }
 
 // Helper functions for channels
-void* getChannel(int chid) {
+void* getChannel(uint64_t chid) {
   // Aquiring the lock
   std::lock_guard<std::mutex> lock(channelMutex);
 
@@ -31,7 +31,7 @@ void* getChannel(int chid) {
 }
 
 template <typename A>
-void addChannel(int chid, LockingCQueue<_Maybe<A>>* queue) {
+void addChannel(uint64_t chid, LockingCQueue<_Maybe<A>>* queue) {
   // Aquireing the lock
   std::lock_guard<std::mutex> lock(channelMutex);
 

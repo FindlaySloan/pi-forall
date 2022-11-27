@@ -24,7 +24,7 @@ generateInterDef i@(FunctionDef funcName tempArgs args retType def) = do
   return $ addNewline s
 generateInterDef i@(FunctionImpl funcName args lines)
   | funcName == "spawnAndRun" = do
-    return $ addNewline $ "std::function<std::function<std::function<std::function<_IO<_Maybe<_Sigma<_Nat, _Sigma<_Vec<_Nat>, _Sigma<_TyEq, _TyEq>>>>>(std::function<void(void)>)>(std::function<_Void(_ElemVec<_Nat>)>)>(_Vec<_Nat>)>(_Nat)> spawnAndRun = " ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};")
+    return $ addNewline $ "std::function<std::function<std::function<std::function<_IO<_Maybe<_Sigma<uint64_t, _Sigma<_Vec<uint64_t>, _Sigma<_TyEq, _TyEq>>>>>(std::function<void(void)>)>(std::function<_Void(_ElemVec<uint64_t>)>)>(_Vec<uint64_t>)>(uint64_t)> spawnAndRun = " ++ (concat $ map (\l -> l ++ ";") lines  ) ++ ( concat $ take ( length args) $ repeat "};")
   | otherwise = do
     s <- generateInterDefForFunctionImpl i
     return $ addNewline s

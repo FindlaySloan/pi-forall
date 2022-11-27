@@ -1,15 +1,44 @@
 module Translate where
 
-data Void : Type where {}   -- no constructors
+data Void : Type where {}
 
--- Not : Type -> Type
--- Not = \a . (a -> Void)
+data Dec (prop : Type) : Type where 
+  Yes of (prf : prop)
+  No  of (cont : prop -> Void)
 
-data Dec (a : Type) : Type where
-  Yes of (prf : a)
-  No  of (prop : Type) (cont : prop -> Void) [a=prop]
+-- Adapted from proof prelude (Chris's work)
+
+f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
+f_equal = \[A][B][f][x][y] pf . 
+  subst Refl by pf
+
+ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
+ZnotS = \n r . contra r
 
 sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
 sym = \ [A] [x] [y] pf .
-  subst Refl by pf
+  subst Refl by pf 
 
+negEqSym : [t : Type]-> [a : t]-> [b : t] -> (a = b -> Void) -> (b = a -> Void)
+negEqSym = \[t] [a] [b] p h . p (sym [t] [b] [a] h)
+
+pred : Nat -> Nat
+pred = \n . case n of 
+    Zero -> Zero
+    Succ m -> m
+
+succInjective : [left : Nat] -> [right : Nat] -> (p : Succ left = Succ right) -> (left = right)
+succInjective = \[left] [right] p .
+  f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
+  
+
+decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
+decEqNat = \a b . case a of 
+     Zero -> case b of 
+               Zero -> Yes Refl 
+               Succ n -> No (ZnotS n)
+     Succ n -> case b of 
+                Zero -> No (negEqSym [Nat] [Zero] [Succ n] (ZnotS n))
+                Succ m -> case (decEqNat n m) of 
+                            Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
+                            No p -> No (\h . p (succInjective [n] [m] h))

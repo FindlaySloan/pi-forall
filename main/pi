@@ -60,6 +60,7 @@ clang-format -style='{BasedOnStyle: Google, ColumnLimit: 200}' -i $COUT
 
 
 echo "Executing the g++ compiler"
+rm $OUTPUT
 g++ --std=c++17 -o=$OUTPUT $COUT -Wno-return-type -O3 -g
 
 
