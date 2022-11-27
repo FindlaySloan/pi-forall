@@ -104,9 +104,31 @@ translateModuleEntries (decl:decls) = do
 
 -- TODO TODO TODO FIX THIS MESS
 shouldReplaceFunc :: String -> Bool
-shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun", "print", "natToString"]
+shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun", "print", "natToString", "plus", "mult", "minus"]
 replaceFunc :: String -> String
 replaceFunc name
+  | name == "plus" = 
+    "[](auto n) {\
+  \auto _133 = [n](auto m) {\
+    \return n+m;\
+  \};\
+  \return _133;\
+\};"
+  | name == "mult" = 
+    "[](auto n) {\
+  \auto _133 = [n](auto m) {\
+    \return n*m;\
+  \};\
+  \return _133;\
+\};"
+  | name == "minus" = 
+    "[](auto n) {\
+  \auto _133 = [n](auto m) {\
+    
+    \return n-m;\
+  \};\
+  \return _133;\
+\};"
   | name == "channelDequeue" = 
     "\
     \[](auto id) {\
