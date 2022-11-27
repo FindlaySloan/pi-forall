@@ -33,10 +33,10 @@ class _Nat_Succ;
 class _Nat {
  public:
   enum _enum_Nat_type type;
-  void* data;
+  std::shared_ptr<void> data;
   static _Nat _Zero();
   static _Nat _Succ(_Nat _1);
-  _Nat(_enum_Nat_type t, void* d) {
+  _Nat(_enum_Nat_type t, std::shared_ptr<void> d) {
     type = t;
     data = d;
   }
@@ -46,44 +46,29 @@ class _Nat {
 class _Nat_Zero {
  public:
   _Nat_Zero(){};
-  _Nat_Zero(const _Nat_Zero& other) {}
+  _Nat_Zero(const _Nat_Zero* other) {}
 };
 class _Nat_Succ {
  public:
   _Nat _1;
   _Nat_Succ(_Nat _1) { this->_1 = _1; };
-  _Nat_Succ(const _Nat_Succ& other) { this->_1 = other._1; }
+  _Nat_Succ(const _Nat_Succ* other) { this->_1 = other->_1; }
 };
 inline _Nat _Nat::_Zero() {
-  _Nat_Zero* _innerClass = new _Nat_Zero();
-  return _Nat(Zero, _innerClass);
+  return _Nat(Zero, std::static_pointer_cast<void>(std::make_shared<_Nat_Zero>()));
 };
 inline _Nat _Nat::_Succ(_Nat _1) {
-  _Nat_Succ* _innerClass = new _Nat_Succ(_1);
-  return _Nat(Succ, _innerClass);
+  return _Nat(Succ, std::static_pointer_cast<void>(std::make_shared<_Nat_Succ>(_1)));
 };
 _Nat::_Nat(const _Nat& other) {
   type = other.type;
-  switch (other.type) {
-    case Zero: {
-      auto d = *(_Nat_Zero*)other.data;
-      auto ret = new _Nat_Zero(d);
-      data = ret;
-      break;
-    }
-    case Succ: {
-      auto d = *(_Nat_Succ*)other.data;
-      auto ret = new _Nat_Succ(d);
-      data = ret;
-      break;
-    }
-  }
+  data = other.data;
 }
 std::function<int(_Nat)> intFromNat = [](_Nat n) {
     if (n.type == Zero) {
         return 0;
     } else {
-        return 1 + intFromNat((*(_Nat_Succ*)n.data)._1);
+        return 1 + intFromNat((*(std::static_pointer_cast<_Nat_Succ>(n.data)))._1);
     }
 };
 
@@ -96,7 +81,7 @@ enum _enum_Void_type {};
 class _Void {
  public:
   enum _enum_Void_type type;
-  void* data;
+  std::shared_ptr<void> data;
 };
 
 
