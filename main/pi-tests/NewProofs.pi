@@ -45,7 +45,7 @@ f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> 
 f_equal = \[A][B][f][x][y] pf . 
   subst Refl by pf
 
-ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
+ZnotS : (n : Nat) -> ((Zero = Succ n) -> Void) 
 ZnotS = \n r . contra r
 
 sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
@@ -86,20 +86,20 @@ neitherHereNorThere = \[x] [y] [xs] xneqy xninxs p . case p of
     Here a as -> xneqy Refl
     There b a as prf -> xninxs prf
 
-falseElem1 : [x : Nat] -> (p : Elem Nat x Nil) -> Void
-falseElem1 = \[x] p . case p of {} 
 
+xNotElemOfNil : [x : Nat] -> ((p : Elem Nat x Nil) -> Void)
+xNotElemOfNil = \[x] p . case p of {}
 
 isElem : (x : Nat) -> (xs : List Nat) -> Dec (Elem Nat x xs)
-isElem = \x xss . case xss of -- Note had to change
-    Nil -> No (falseElem1 [x])
-    Cons y xs -> 
+isElem = \x xs . case xs of
+    Nil -> No (xNotElemOfNil [x])
+    Cons y ys -> 
       case (decEqNat x y) of
-         Yes p -> Yes (subst (Here x xs) by p)
+         Yes p -> Yes (Here y ys)
          No xneqy -> 
-          case (isElem x xs) of
-             Yes xinxs -> Yes (There y x xs xinxs)
-             No  xninxs -> No (neitherHereNorThere [x] [y] [xs] xneqy xninxs)
+          case (isElem x ys) of
+             Yes xinys -> Yes (There y x ys xinys)
+             No  xninys -> No (neitherHereNorThere [x] [y] [ys] xneqy xninys)
 
 -- My proofs
 
@@ -433,6 +433,11 @@ spawnAndRun : (pid : Nat) -> [n : Nat] -> (pidSet : Vec Nat n) -> ((ElemVec Nat 
         -> IO (Maybe ({newPid : Nat | {newPidSet : Vec Nat (Succ n) | (pid = newPid) * ((ConsV [n] pid pidSet : Vec Nat (Succ n)) = newPidSet) }}))
 spawnAndRun =  TRUSTME
 
+-- Timing Functions
+
+getTime : Nat -> IO Nat 
+getTime = TRUSTME
+
 
 -- Patterns
 
@@ -724,25 +729,182 @@ id = \a . Succ a
 -- mainmain = bind [Unit] [Unit] (printList (map [Nat] [List Char] natToString <42, 42, 42, 42, 42, 42, 42, 42, 42, 42>)) 
 --            (bind [Unit] [Unit] (print "OUTPUT TIME") (printList (map [Nat] [List Char] natToString (map [Nat] [Nat] (fib) <42, 42, 42, 42, 42, 42, 42, 42, 42, 42>))))
 
+runInIO : [A : Type] -> (f : A) -> IO Unit
+runInIO = \ [A] f . (returnIO [Unit] ())   
 
-main3 : IO Unit
-main3 = bind [Unit] [Unit] (printList (map [Nat] [List Char] natToString <42, 42, 42, 42, 42, 42, 42, 42, 42, 42>)) 
-         (bind [Unit] [Unit] (print "OUTPUT-TIME")
-         (case decUniqueVec [3] (append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) of--(ConsV [1] 2 (ConsV [0] 1 NilV)) of--(append [Nat] [2] [0] (ConsV [1] 2 (ConsV [0] 1 NilV)) NilV) of
-           Yes pf1 ->
-             bindEq
-             [(Maybe ((List Nat) * (Farm Nat 2) * {newPidSet : Vec Nat (plus 3 0) | newPidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat (plus 3 0))} * {newChidSet : Vec Nat (plus 3 0) | newChidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat (plus 3 0))}))]
-             [Unit]
-             (createFarm [Nat] 0 (NilV) 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) (pf1) 0 NilV 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) (pf1) 2 (negEqSym [Nat] [0] [2] (ZnotS 1)) (Refl) (Refl) (fib) <42, 42, 42, 42, 42, 42, 42, 42, 42, 42>)
-             (\ mres . case mres of
-               Nothing -> print "RIP"
-               Just r  -> 
-                 let (l, rest) = r in
+baseRun : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+baseRun = \ [A] inList func . 
+  bindEq [Nat] [Unit] (getTime 0) 
+    (\ startTime1 . 
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+    bind [Unit] [Unit] (runInIO [List A] (map [A] [A] (func) inList)) (
+    bindEq [Nat] [Unit] (getTime 0)
+    (\ endTime1 . 
+      bind [Unit] [Unit] (print (natToString endTime1)) (end)))))
+
+runFarm : [A : Type] -> List A -> (f : A -> A) -> (numWorkers : Nat) ->(n : Nat) -> (pidSet : Vec Nat n) -> (x : Nat) -> (pidsToAdd : Vec Nat x) -> (m : Nat) -> (chidSet : Vec Nat m) -> (y : Nat) -> (chidsToAdd : Vec Nat y) -> IO (Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))}))
+runFarm = \ [A] inList func numWorkers n pidSet x pidsToAdd m chidSet y chidsToAdd .
+  -- Getting pids proof
+  case decUniqueVec [plus x n] (append [Nat] [x] [n] pidsToAdd pidSet) of
+    Yes pidsProof ->
+      -- Getting chids proof
+      case decUniqueVec [plus y m] (append [Nat] [y] [m] chidsToAdd chidSet) of
+        Yes chidsProof -> 
+          case decEqNat numWorkers 0 of
+            No numWneq0 ->
+              case decEqNat x (Succ numWorkers) of
+                Yes xProof ->
+                  case decEqNat y (Succ numWorkers) of
+                    Yes yProof ->
+                      bindEq [Nat] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})] 
+                      
+                      (getTime 0)
+                      (\ startTime . 
+                        bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})] 
+                        
+                        (print (natToString startTime)) (
+                          bindEq [Maybe ((List A) * (Farm A numWorkers) * {newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))} )] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+
+                          (createFarm [A] n pidSet x pidsToAdd pidsProof m chidSet y chidsToAdd chidsProof numWorkers numWneq0 (xProof) (yProof) (func) inList) 
+                          ( \ mresult . case mresult of
+                            Just result ->
+                              let (output, rest1) = result in
+                              let (farmObject, toReturn) = rest1 in
+                              bindEq [Nat] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})] 
+                              
+                              (getTime 0)
+                              (\ endTime . 
+                                bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})] 
+                                
+                                (print (natToString endTime)) (
+                                returnIO 
+                                [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                                (Just (toReturn)))
+                              )
+
+                            Nothing -> 
+                              returnIO 
+                              [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                              Nothing
+                          )
+                        )
+                      )
+                    No xYProof ->
+                      bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                      
+                      (print "Error") 
+                      (returnIO 
+                        [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                        Nothing)
+                No cXProof -> 
+                  bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                      
+                      (print "Error") 
+                      (returnIO 
+                        [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                        Nothing)
+            Yes numWeq0 ->
+              bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                      
+                      (print "Error") 
+                      (returnIO 
+                        [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                        Nothing)
+        No cChidsProof ->
+          bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                      
+                      (print "Error") 
+                      (returnIO 
+                        [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                        Nothing)
+    No cPidsProof -> 
+      bind [Unit] [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                      
+                      (print "Error") 
+                      (returnIO 
+                        [Maybe ({newPidSet : Vec Nat (plus x n) | newPidSet = ((append [Nat] [x] [n] pidsToAdd pidSet) : Vec Nat (plus x n))} * {newChidSet : Vec Nat (plus y m) | newChidSet = ((append [Nat] [y] [m] chidsToAdd chidSet) : Vec Nat (plus y m))})]
+                        Nothing)
+
+
+sixCoreTest2 : [A : Type] -> List A -> (f : A -> A) -> (pidSet : Vec Nat 7) -> (chidSet : Vec Nat 7) -> IO Unit
+sixCoreTest2 = \ [A] inList func pidSet chidSet . 
+  bindEq 
+    [Maybe ({newPidSet : Vec Nat 12 | newPidSet = ((append [Nat] [5] [7] (ConsV [4] 12 (ConsV [3] 11 (ConsV [2] 10 (ConsV [1] 9 (ConsV [0] 8 NilV))))) pidSet) : Vec Nat 12)} * {newChidSet : Vec Nat 12 | newChidSet = ((append [Nat] [5] [7] (ConsV [4] 12 (ConsV [3] 11 (ConsV [2] 10 (ConsV [1] 9 (ConsV [0] 8 NilV))))) chidSet) : Vec Nat 12)})]
+    [Unit]
+    (runFarm [A] inList func 4 7 pidSet 5 (ConsV [4] 12 (ConsV [3] 11 (ConsV [2] 10 (ConsV [1] 9 (ConsV [0] 8 NilV))))) 7 chidSet 5 (ConsV [4] 12 (ConsV [3] 11 (ConsV [2] 10 (ConsV [1] 9 (ConsV [0] 8 NilV)))))) (
+      \ mresult3 . case mresult3 of
+        Just result3 ->
+          let (pidStuff3, chidStuff3) = result3 in 
+          let (pidSet3, pidSet3Pf) = pidStuff3 in
+          let (chidSet3, chidSet3Pf) = chidStuff3 in
+          -- Five workers
+          bindEq 
+          [Maybe ({newPidSet : Vec Nat 18 | newPidSet = ((append [Nat] [6] [12] (ConsV [5] 18 (ConsV [4] 17 (ConsV [3] 16 (ConsV [2] 15 (ConsV [1] 14 (ConsV [0] 13 NilV)))))) pidSet3) : Vec Nat 18)} * {newChidSet : Vec Nat 18 | newChidSet = ((append [Nat] [6] [12] (ConsV [5] 18 (ConsV [4] 17 (ConsV [3] 16 (ConsV [2] 15 (ConsV [1] 14 (ConsV [0] 13 NilV)))))) chidSet3) : Vec Nat 18)})]
+          [Unit]
+          (runFarm [A] inList func 5 12 pidSet3 6 (ConsV [5] 18 (ConsV [4] 17 (ConsV [3] 16 (ConsV [2] 15 (ConsV [1] 14 (ConsV [0] 13 NilV)))))) 12 chidSet3 6 (ConsV [5] 18 (ConsV [4] 17 (ConsV [3] 16 (ConsV [2] 15 (ConsV [1] 14 (ConsV [0] 13 NilV))))))) (
+            \ mresult4 . case mresult4 of
+              Just result4 -> 
+                let (pidStuff4, chidStuff4) = result4 in 
+                let (pidSet4, pidSet4Pf) = pidStuff4 in
+                let (chidSet4, chidSet4Pf) = chidStuff4 in
+                -- 6 Workers
+                bind 
+                [Maybe ({newPidSet : Vec Nat 25 | newPidSet = ((append [Nat] [7] [18] (ConsV [6] 25 (ConsV [5] 24 (ConsV [4] 23 (ConsV [3] 22 (ConsV [2] 21 (ConsV [1] 20 (ConsV [0] 19 NilV))))))) pidSet4) : Vec Nat 25)} * {newChidSet : Vec Nat 25 | newChidSet = ((append [Nat] [7] [18] (ConsV [6] 25 (ConsV [5] 24 (ConsV [4] 23 (ConsV [3] 22 (ConsV [2] 21 (ConsV [1] 20 (ConsV [0] 19 NilV))))))) chidSet4) : Vec Nat 25)})]
+                [Unit]
+                (runFarm [A] inList func 6 18 pidSet4 7 (ConsV [6] 25 (ConsV [5] 24 (ConsV [4] 23 (ConsV [3] 22 (ConsV [2] 21 (ConsV [1] 20 (ConsV [0] 19 NilV))))))) 18 chidSet4 7 (ConsV [6] 25 (ConsV [5] 24 (ConsV [4] 23 (ConsV [3] 22 (ConsV [2] 21 (ConsV [1] 20 (ConsV [0] 19 NilV))))))))
+                end
+              Nothing -> end
+          )
+        Nothing -> end
+    )
+
+
+-- 3 Farm
+
+-- 4 Farm
+
+-- 5 Farm
+
+-- 6 Farm
+
+
+-- Test for 6 cores
+sixCoreTest : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+sixCoreTest = \ [A] inList func .
+  bind [Unit] [Unit] (baseRun [A] inList func) ( 
+  -- Two Workers
+  bindEq 
+  [Maybe ({newPidSet : Vec Nat 3 | newPidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat 3)} * {newChidSet : Vec Nat 3 | newChidSet = ((append [Nat] [3] [0] (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) NilV) : Vec Nat 3)})]
+  [Unit] 
+  (runFarm [A] inList func 2 0 NilV 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV))) 0 NilV 3 (ConsV [2] 3 (ConsV [1] 2 (ConsV [0] 1 NilV)))) (
+    \ mResult1 . case mResult1 of
+      Just result1 -> 
+        let (pidStuff1, chidStuff1) = result1 in 
+        let (pidSet1, pidSet1Pf) = pidStuff1 in
+        let (chidSet1, chidSet1Pf) = chidStuff1 in
+        -- Three workers
+        bindEq 
+        [Maybe ({newPidSet : Vec Nat 7 | newPidSet = ((append [Nat] [4] [3] (ConsV [3] 7 (ConsV [2] 6 (ConsV [1] 5 (ConsV [0] 4 NilV)))) pidSet1) : Vec Nat 7)} * {newChidSet : Vec Nat 7 | newChidSet = ((append [Nat] [4] [3] (ConsV [3] 7 (ConsV [2] 6 (ConsV [1] 5 (ConsV [0] 4 NilV)))) chidSet1) : Vec Nat 7)})]
+        [Unit] 
+        (runFarm [A] inList func 3 3 pidSet1 4 (ConsV [3] 7 (ConsV [2] 6 (ConsV [1] 5 (ConsV [0] 4 NilV)))) 3 chidSet1 4 (ConsV [3] 7 (ConsV [2] 6 (ConsV [1] 5 (ConsV [0] 4 NilV))))) (
+          \ mResult2 . case mResult2 of
+            Just result2 -> 
+              let (pidStuff2, chidStuff2) = result2 in 
+              let (pidSet2, pidSet2Pf) = pidStuff2 in
+              let (chidSet2, chidSet2Pf) = chidStuff2 in
+              -- Rest of tests
+              sixCoreTest2 [A] inList func pidSet2 chidSet2 
               
-                 (printList (map [Nat] [List Char] natToString l))
-                
-             )))
--- FARM
+            Nothing -> end
+        )
+      Nothing -> end
+  ))
+
+mainFunc : IO Unit
+mainFunc = sixCoreTest [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
+
+
+-- FARM 2
 -- 11.687
 -- 23.35
 -- 0.001
@@ -751,3 +913,20 @@ main3 = bind [Unit] [Unit] (printList (map [Nat] [List Char] natToString <42, 42
 -- 23.843
 -- 23.83
 -- 0.001
+
+-- Results 
+-- 1 W 1670242292771	1670242436713 | 1
+-- 2 W 1670242436962	1670242509798 | 1.97624800922621
+-- 3 W 1670242509798	1670242559011 | 2.924877572999
+-- 4 W 1670242559012	1670242596312 | 3.85903485254692
+-- 5 W 1670242596318	1670242626387 | 4.78705643686188
+
+
+-- 1 W 1670250234719	1670250372018 | 1
+-- 2 W 1670250372226	1670250442206 | 1.96197484995713
+-- 3 W 1670250442207	1670250489090 | 2.92854552822985
+-- 4 W 1670250489092	1670250524466 | 3.88135353649573
+-- 5 W 1670250524472	1670250553432 | 4.74098756906077
+-- 6 W 1670250553453	1670250577620 | 5.68125956883353
+
+

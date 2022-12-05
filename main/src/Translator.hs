@@ -104,9 +104,14 @@ translateModuleEntries (decl:decls) = do
 
 -- TODO TODO TODO FIX THIS MESS
 shouldReplaceFunc :: String -> Bool
-shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun", "print", "natToString", "plus", "mult", "minus"]
+shouldReplaceFunc name = elem name ["channelDequeue", "end", "prim_create_channel", "channelEnqueue", "spawnAndRun", "print", "natToString", "plus", "mult", "minus", "getTime"]
 replaceFunc :: String -> String
 replaceFunc name
+  | name == "getTime" =
+    "[](auto i) {\
+        \return returnIO<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>\
+        \(std::chrono::system_clock::now().time_since_epoch()).count());\
+    \}"
   | name == "plus" = 
     "[](auto n) {\
   \auto _133 = [n](auto m) {\
