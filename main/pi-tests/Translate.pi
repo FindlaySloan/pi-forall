@@ -1,44 +1,63 @@
 module Translate where
 
-data Void : Type where {}
+data Vec (A : Type) (n : Nat) : Type where
+  NilV  of                       [n = Zero] 
+  ConsV of [m:Nat] (A) (Vec A m) [n = Succ m]
 
-data Dec (prop : Type) : Type where 
-  Yes of (prf : prop)
-  No  of (cont : prop -> Void)
+plus : Nat -> Nat -> Nat
+plus = \ n m .
+  case n of
+    Zero -> m
+    Succ pred -> Succ (plus pred m)
 
--- Adapted from proof prelude (Chris's work)
+mult : Nat -> Nat -> Nat
+mult = \ n m .
+  case n of
+    Zero -> Zero
+    Succ pred -> plus m (mult pred m)
 
-f_equal :  [A:Type] -> [B : Type] -> [f : A -> B] -> [x:A] -> [y:A] -> x = y -> f x = f y
-f_equal = \[A][B][f][x][y] pf . 
-  subst Refl by pf
 
-ZnotS : (n : Nat) -> (Zero = Succ n) -> Void 
-ZnotS = \n r . contra r
-
-sym : [A:Type] -> [x:A] -> [y:A] -> (x = y) -> y = x
-sym = \ [A] [x] [y] pf .
-  subst Refl by pf 
-
-negEqSym : [t : Type]-> [a : t]-> [b : t] -> (a = b -> Void) -> (b = a -> Void)
-negEqSym = \[t] [a] [b] p h . p (sym [t] [b] [a] h)
+minus : Nat -> Nat -> Nat
+minus = \n m .
+   case n of
+     Zero -> Zero
+     Succ p -> case m of
+                    Zero -> n
+                    Succ mpred -> minus p mpred
 
 pred : Nat -> Nat
 pred = \n . case n of 
     Zero -> Zero
     Succ m -> m
 
-succInjective : [left : Nat] -> [right : Nat] -> (p : Succ left = Succ right) -> (left = right)
-succInjective = \[left] [right] p .
-  f_equal [Nat] [Nat] [pred] [Succ left] [Succ right] p 
-  
+mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
+mapV = \[A][B][n] f v.
+  case v of 
+    NilV -> NilV
+    ConsV [m] x xs -> ConsV [m] (f x) (mapV[A][B] [m] f xs)
 
-decEqNat : (a : Nat) -> (b : Nat) -> Dec (a = b)
-decEqNat = \a b . case a of 
-     Zero -> case b of 
-               Zero -> Yes Refl 
-               Succ n -> No (ZnotS n)
-     Succ n -> case b of 
-                Zero -> No (negEqSym [Nat] [Zero] [Succ n] (ZnotS n))
-                Succ m -> case (decEqNat n m) of 
-                            Yes p -> Yes (f_equal [Nat] [Nat] [\x . Succ x] [n] [m] p)
-                            No p -> No (\h . p (succInjective [n] [m] h))
+headV : [A :Type] -> [n:Nat] -> Vec A (Succ n) -> A
+headV = \ [A][n] x.  case x of 
+     ConsV [m] y ys -> y
+	  -- NilV case is impossible
+
+tailV : [A :Type] -> [n:Nat] -> Vec A (Succ n) -> Vec A n
+tailV = \ [A][n] x.  case x of 
+     -- NilV case impossible
+     ConsV [m] y ys -> ys
+
+
+
+transpose : [n : Nat] -> [m : Nat] -> Vec (Vec Nat m) n -> Vec (Vec Nat n) m
+transpose = \ [r] [c] m . case m of
+  NilV -> NilV
+  ConsV [rPred] y _ -> case y of 
+    NilV -> NilV
+    ConsV [cPred] _ _ -> ConsV  [cPred] (mapV [Vec Nat c] [Nat] [r] (headV [Nat] [cPred]) m) (transpose [r] [cPred] (mapV [Vec Nat c] [Vec Nat cPred] [r] (tailV [Nat] [cPred]) m))
+
+
+
+
+
+-- matMul : [n : Nat] -> [m : Nat] -> Vec (Vec Nat m) n -> Vec (Vec Nat m) n -> Vec (Vec Nat m) n
+-- matMul = \ [r] [c] m1 m2 . 
