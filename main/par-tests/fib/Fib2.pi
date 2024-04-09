@@ -1,4 +1,4 @@
-module NewProofs where
+module Fib2 where
 
 -- Data types
 
@@ -1023,20 +1023,61 @@ callFarm28 = \ [A] inList func .
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 
--- runFarms : [A : Type] -> List A -> (f : A -> A) -> IO Unit
--- runFarms = \ [A] inList func .
---    bind [Unit] [Unit] (print "2 cores") (
---     bind [Unit] [Unit] (callFarm2 [A] inList func) (
---      bind [Unit] [Unit] (print "4 cores") (
---       bind [Unit] [Unit] (callFarm4 [A] inList func) (
---        bind [Unit] [Unit] (print "6 cores") (
---         bind [Unit] [Unit] (callFarm6 [A] inList func) ( end ))))))
+runFarms4 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms4 = \ [A] inList func . 
+                           bind [Unit] [Unit] (print "26 cores") (
+                              bind [Unit] [Unit] (callFarm26 [A] inList func) (
+                                bind [Unit] [Unit] (print "28 cores") (
+                                 bind [Unit] [Unit] (callFarm28 [A] inList func) (end))))
+
+runFarms3 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms3 = \ [A] inList func . 
+                 bind [Unit] [Unit] (print "18 cores") (
+                    bind [Unit] [Unit] (callFarm18 [A] inList func) (
+                     bind [Unit] [Unit] (print "20 cores") (
+                       bind [Unit] [Unit] (callFarm20 [A] inList func) (
+                        bind [Unit] [Unit] (print "22 cores") (
+                         bind [Unit] [Unit] (callFarm22 [A] inList func) (
+                          bind [Unit] [Unit] (print "24 cores") (
+                            bind [Unit] [Unit] (callFarm24 [A] inList func) (runFarms4 [A] inList func)))))))) 
+
+runFarms2 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms2 = \ [A] inList func .  
+          bind [Unit] [Unit] (print "10 cores") (
+            bind [Unit] [Unit] (callFarm10 [A] inList func) (
+             bind [Unit] [Unit] (print "12 cores") (
+              bind [Unit] [Unit] (callFarm12 [A] inList func) (
+               bind [Unit] [Unit] (print "14 cores") (
+                bind [Unit] [Unit] (callFarm14 [A] inList func) (
+                 bind [Unit] [Unit] (print "16 cores") (
+                  bind [Unit] [Unit] (callFarm16 [A] inList func) (runFarms3 [A] inList func))))))))
+
+runFarms1 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms1 = \ [A] inList func .
+   bind [Unit] [Unit] (print "2 cores") (
+    bind [Unit] [Unit] (callFarm2 [A] inList func) (
+     bind [Unit] [Unit] (print "4 cores") (
+      bind [Unit] [Unit] (callFarm4 [A] inList func) (
+       bind [Unit] [Unit] (print "6 cores") (
+        bind [Unit] [Unit] (callFarm6 [A] inList func) ( 
+         bind [Unit] [Unit] (print "8 cores") (
+          bind [Unit] [Unit] (callFarm8 [A] inList func) ( runFarms2 [A] inList func))))))))
+
+
+genListI : (n : Nat) -> List Nat
+genListI = \ n . case n of
+                Zero -> Nil
+                Succ m -> Cons 45 (genListI m)
 
 -- mainFunc : IO Unit                                                                                                                                                                                            
--- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
+-- mainFunc = runFarms1 [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 -- mainFunc : IO Unit 
 -- mainFunc = baseRun [Nat] <40> fib
+
+mainFunc : IO Unit 
+mainFunc = runFarms1 [Nat] (genListI 100) fib
+
 
 mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
 mapV = \[A][B][n] f v.

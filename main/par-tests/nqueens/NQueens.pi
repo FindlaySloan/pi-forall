@@ -1,0 +1,247 @@
+module NQueens where 
+
+-- data List (a : Type) : Type where
+--  Nil  
+--  Cons of (a) (List a)
+
+data Nat : Type where
+  Zero
+  Succ of (Nat)
+
+plus : Nat -> Nat -> Nat
+plus = \ n m .
+  case n of
+    Zero -> m
+    Succ pred -> Succ (plus pred m)
+
+length : [a : Type] -> List a -> Nat   
+length = \[a] xs . case xs of 
+  Nil -> 0
+  Cons y ys -> plus 1 (length [a] ys)
+
+append : [a:Type] -> List a -> List a -> List a
+append = \[a] xs ys. case xs of 
+  Nil -> ys
+  Cons x xs2 -> Cons x (append [a] xs2 ys)
+
+orb : Bool -> Bool -> Bool
+orb = \b1 b2. 
+  case b1 of 
+    True -> True
+    False -> b2
+
+andb : Bool -> Bool -> Bool
+andb = \ b1 b2. 
+  case b1 of {
+     True -> b2;
+     False -> False }
+
+nat_eq : Nat -> Nat -> Bool
+nat_eq = \ x y .
+  case x of 
+     Zero -> case y of
+        Zero -> True
+        Succ n2 -> False
+     Succ m2 -> case y of 
+        Zero -> False
+        Succ n2 -> nat_eq m2 n2
+
+minus : Nat -> Nat -> Nat
+minus = \n m .
+   case n of
+     Zero -> Zero
+     Succ pred -> case m of
+                    Zero -> n
+                    Succ mpred -> minus pred mpred
+
+data Tuple2 (a : Type) (b : Type) : Type where 
+    MkTuple2 of (a) (b) 
+
+fst : [a : Type] -> [b : Type] -> (t : Tuple2 a b) -> a 
+fst = \[a] [b] t . case t of 
+        MkTuple2 t1 t2 -> t1 
+
+snd : [a : Type] -> [b : Type] -> (t : Tuple2 a b) -> b 
+snd = \[a] [b] t . case t of 
+        MkTuple2 t1 t2 -> t2 
+
+zip : [a : Type] -> [b : Type] -> List a -> List b -> List (Tuple2 a b)
+zip = \ [a] [b] l1 l2 . case l2 of 
+ Nil -> Nil 
+ Cons y ys -> 
+  case l1 of 
+   Nil       -> Nil
+   Cons x xs -> Cons (MkTuple2 x y) (zip [a] [b] xs ys)
+
+
+foldr : [a : Type] -> [b : Type] -> (a -> b -> b) -> b -> List a -> b
+foldr = \ [a] [b] fn acc list . case list of 
+        Nil -> acc 
+        Cons x xs -> fn x (foldr [a] [b] fn acc xs)
+
+negb : Bool -> Bool
+negb = \ b . if b then False else True
+
+check : (t1 : Tuple2 Nat Nat) -> (t2 : Tuple2 Nat Nat) -> Bool 
+check = \t1 t2 . 
+            case t1 of  
+                MkTuple2 c l -> 
+                    case t2 of 
+                        MkTuple2 i j -> 
+                            orb (orb (nat_eq l j) (nat_eq (plus c j) (plus i j))) (nat_eq (minus c l) (minus i j))
+
+mkSafeList : (p : List (Tuple2 Nat Nat)) -> (y : Tuple2 Nat Nat) -> List Bool
+mkSafeList = \ p y . case p of 
+                Nil -> Nil 
+                Cons x xs -> Cons (negb (check x y)) (mkSafeList xs y)
+
+listSeq : (n : Nat) -> (c : Nat) -> List Nat 
+listSeq = \ n c . case n of 
+            Zero -> Nil  
+            Succ m -> Cons c (listSeq m (Succ c)) 
+
+safe2 : (p : List Nat) -> (n : Nat) -> Bool 
+safe2 = 
+ \ ap na . case length [Nat] ap of 
+	 Zero -> False 
+	 Succ l ->     case (plus l  1) of    
+           Zero -> False 
+           Succ m -> True
+--             foldr [Bool] [Bool] (\x y . andb x y) True (mkSafeList (zip [Nat] [Nat] (listSeq 1 (length [Nat] poo)) poo) (MkTuple2 (Succ m) na))  
+
+makeList : (p : List (List Nat)) -> (n : List Nat) -> List (List Nat)
+makeList = \ p n . case p of 
+                     Nil -> Nil 
+                     Cons pH pT ->
+                        case n of 
+                            Nil -> Nil 
+                            Cons nH nT ->
+                                case safe2 pH nH of 
+                                    True -> Cons (append [Nat] pH (Cons nH Nil)) (makeList pT nT)
+                                    False -> makeList pT nT
+
+-- rainhas2(0, Linha, Numero) -> [[]];
+-- rainhas2(M, Linha, Numero) -> [lists:append(P, [N]) || P <- rainhas2(M-1, Linha, Numero), N <- lists:append(lists:seq(Linha, Numero), lists:seq(1, Linha-1)), safe(P, N)].
+
+rainhasList : (p : List (List Nat)) -> (n : List Nat) -> (linHa : Nat) -> (numero : Nat) -> List (List Nat)
+rainhasList = \p n linHa numero . case p of 
+            Nil -> Nil 
+            Cons pH pT -> case n of 
+                Nil -> Nil 
+                Cons nH nT -> case append [Nat] (listSeq linHa numero) (listSeq 1 (minus linHa 1)) of 
+                        Nil -> case safe2 pH nH of 
+                                True -> Cons (append [Nat] pH Nil) Nil 
+                                False -> Nil 
+                        Cons aH aT -> case safe2 pH nH of 
+                                True -> Cons (append [Nat] pH (Cons nH Nil)) (rainhasList pT nT linHa numero)
+                                False -> rainhasList pT nT linHa numero 
+
+rainhas2 : (n : Nat) -> (linHa : Nat) -> (numero : Nat) -> List (List Nat) 
+rainhas2 = \n linHa numero . 
+       case n of 
+            Zero      -> Cons Nil Nil 
+            (Succ n2) -> 
+                case rainhas2 n2 linHa numero of 
+                    Nil -> Nil 
+                    Cons rH rT -> 
+                        case append [Nat] (listSeq linHa numero) (listSeq 1 (minus linHa 1)) of 
+                            Nil -> Nil 
+                            Cons aH aT -> 
+                                rainhasList (Cons rH rT) (Cons aH aT) linHa numero      
+
+
+prainhas : (numero : Nat) -> (linHa : Nat) -> List (List Nat) 
+prainhas = \ numero linHa . rainhas2 numero linHa numero
+
+-- search(Numero, N) -> lists:takewhile( fun (A) -> head(A) == N end, prainhas(Numero, N)).
+
+takeWhile : [a : Type] -> (p : a -> Bool) -> List a -> List a 
+takeWhile = \[a] p xs . case xs of 
+                Nil -> Nil 
+                Cons x ts -> case p x of 
+                                True -> Cons x (takeWhile [a] p ts) 
+                                False -> Nil 
+
+head : List Nat -> Nat
+head = \xs . case xs of 
+		Nil -> Zero 
+		Cons y ys -> y 
+
+search : (numero : Nat) -> (n : Nat) -> List (List Nat) 
+search = \ numero n . 
+            takeWhile [List Nat] (\a . nat_eq (head a) n) (prainhas numero n)
+
+map : [a : Type] -> [b : Type] -> (f : a -> b) -> List a -> List b
+map = \[a] [b] f xs . case xs of
+	Nil -> Nil
+	Cons y ys -> Cons (f y) (map [a] [b] f ys) 
+
+
+rainhas : (n : Nat) -> List (List (List Nat)) 
+rainhas = \ n . map [Nat] [List (List Nat)] (\x . search n x) (listSeq 1 n)
+
+run : (n : Nat) -> Nat
+run = \n . case rainhas n of 
+--		Nil -> Zero 
+		Cons x xs -> case x of 
+ 			Nil -> Zero
+			Cons y ys ->  case y of
+					Nil -> Zero  
+					Cons z zs -> z  
+
+-- IO Monad
+
+data IO (A : Type) : Type where
+    MkIO of (A)
+
+returnIO : [A : Type] -> A -> IO A
+returnIO = \[A] a . MkIO a
+
+bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
+bindEq = \ [A] [B] a f . case a of
+                            MkIO inner -> f inner
+
+bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
+bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
+
+print : List Char -> IO Unit
+print = TRUSTME
+
+printList : List (List Char) -> IO Unit
+printList = \ l . case l of
+  Nil -> returnIO [Unit] ()
+  Cons x xs -> bind [Unit] [Unit] (print x) (printList xs)
+
+-- Timing Functions
+
+getTime : Nat -> IO Nat
+getTime = TRUSTME
+
+-- Function to turn a Nat to String
+natToString : Nat -> List Char
+natToString = TRUSTME
+
+end : IO Unit
+end = TRUSTME
+
+
+runInIO : [A : Type] -> (f : A) -> IO Unit
+runInIO = \ [A] f . (returnIO [Unit] ())
+
+baseRun : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+baseRun = \ [A] inList func .
+  bindEq [Nat] [Unit] (getTime 0)
+    (\ startTime1 .
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+    bind [Unit] [Unit] (runInIO [List A] (map [A] [A] (func) inList)) (
+    bindEq [Nat] [Unit] (getTime 0)
+    (\ endTime1 .
+      bind [Unit] [Unit] (print (natToString endTime1)) (end)))))
+
+genListI : (n : Nat) -> List Nat
+genListI = \ n . case n of 
+      Zero -> Nil
+      Succ m -> Cons 1000 (genListI m)
+
+mainFunc : IO Unit
+mainFunc = baseRun [Nat] (genListI 1) (run)

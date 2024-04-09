@@ -1,4 +1,4 @@
-module NewProofs where
+module FibBase where
 
 -- Data types
 
@@ -1023,20 +1023,29 @@ callFarm28 = \ [A] inList func .
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 
--- runFarms : [A : Type] -> List A -> (f : A -> A) -> IO Unit
--- runFarms = \ [A] inList func .
---    bind [Unit] [Unit] (print "2 cores") (
---     bind [Unit] [Unit] (callFarm2 [A] inList func) (
---      bind [Unit] [Unit] (print "4 cores") (
---       bind [Unit] [Unit] (callFarm4 [A] inList func) (
---        bind [Unit] [Unit] (print "6 cores") (
---         bind [Unit] [Unit] (callFarm6 [A] inList func) ( end ))))))
+runFarms : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms = \ [A] inList func .
+    bind [Unit] [Unit] (print "2 cores") (
+     bind [Unit] [Unit] (callFarm2 [A] inList func) (
+      bind [Unit] [Unit] (print "4 cores") (
+       bind [Unit] [Unit] (callFarm4 [A] inList func) (
+        bind [Unit] [Unit] (print "6 cores") (
+         bind [Unit] [Unit] (callFarm6 [A] inList func) ( end ))))))
 
 -- mainFunc : IO Unit                                                                                                                                                                                            
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
+genListI : (n : Nat) -> List Nat 
+genListI = \ n . case n of 
+		Zero -> Nil 
+                Succ m -> Cons 45 (genListI m) 
+
 -- mainFunc : IO Unit 
--- mainFunc = baseRun [Nat] <40> fib
+-- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
+
+mainFunc : IO Unit 
+mainFunc = baseRun [Nat] (genListI 100) fib 
+
 
 mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
 mapV = \[A][B][n] f v.

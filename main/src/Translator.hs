@@ -311,7 +311,7 @@ generateFunctionDef (FunctionDef name tempArgs args _ definition) t@(TyEq a b) =
   cType <- generateCType t -- Generating the C Type for the TyEq
   return $ FunctionDef name tempArgs args cType cType-- TODO refactor
 
-generateFunctionDef f t = undefined
+generateFunctionDef f t = error (show t) -- undefined
 -- | This function will be used to check if there is an inital lambda, if not then it will make an anaomyse C function
 -- | as there is no intital lambda
 initialGenerateFunctionImpl :: InterDef -> Term -> State TranslatorState InterDef
@@ -505,7 +505,7 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
       put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls) -- Updating the stack
       let line = start ++ "[" ++ (concat $ intersperse "," captureStack) ++ "]() { " ++(concat $ intersperse ";" $ cLines termInterDef) ++ "; return _Void(); }()"
       return $ FunctionImpl name argNames (line : lines)
-    _  -> do
+    ((Match bnd1) : (Match bnd2) : [])  -> do
       case termType of
         -- (TCon "Bool" _ ) -> do
         --   let [(Match bnd1), (Match bnd2)] = matches
@@ -565,7 +565,12 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Case term matches) = do
           put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls) -- Updating the stack
           let line = start ++ "[" ++ (concat $ intersperse "," captureStack) ++ "]() { " ++(concat $ intersperse ";" $ cLines termInterDef) ++ "; switch ( "  ++ "  " ++ termSyntheticVar ++ ".type) { " ++ (concat $ concat $ map (cLines) matchesInterDefs) ++ "} }()"
           return $ FunctionImpl name argNames (line : lines)
-  
+    x -> do
+          matchesInterDefs <- mapM (generateFunctionImplForMatch termType) matches
+          (interDefs, varNumber, varStack, captureStack, typeStack, decls) <- get -- Getting the state to remove the term Synthetic var from stack
+          put (interDefs, varNumber, tail varStack, captureStack, typeStack, decls) -- Updating the stack
+          let line = start ++ "[" ++ (concat $ intersperse "," captureStack) ++ "]() { " ++(concat $ intersperse ";" $ cLines termInterDef) ++ "; switch ( "  ++ "  " ++ termSyntheticVar ++ ".type) { " ++ (concat $ concat $ map (cLines) matchesInterDefs) ++ "} }()"
+          return $ FunctionImpl name argNames (line : lines)  
 --  let termType = TyChar
 
 
@@ -818,7 +823,7 @@ generateFunctionImplForPattern (PatCon name args) scrutType = do
 
 
 
-generateFunctionImplForPattern (PatVar name) scrutType = undefined -- NOTE: IF HERE THEN SOMETHING IS VERY WRONG
+generateFunctionImplForPattern (PatVar name) scrutType = error $ show name -- undefined -- NOTE: IF HERE THEN SOMETHING IS VERY WRONG
 
 
 

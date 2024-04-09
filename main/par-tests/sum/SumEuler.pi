@@ -1,4 +1,4 @@
-module NewProofs where
+module SumEuler where
 
 -- Data types
 
@@ -1023,20 +1023,122 @@ callFarm28 = \ [A] inList func .
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 
--- runFarms : [A : Type] -> List A -> (f : A -> A) -> IO Unit
--- runFarms = \ [A] inList func .
---    bind [Unit] [Unit] (print "2 cores") (
---     bind [Unit] [Unit] (callFarm2 [A] inList func) (
---      bind [Unit] [Unit] (print "4 cores") (
---       bind [Unit] [Unit] (callFarm4 [A] inList func) (
---        bind [Unit] [Unit] (print "6 cores") (
---         bind [Unit] [Unit] (callFarm6 [A] inList func) ( end ))))))
+lte : Nat -> Nat -> Bool
+lte = \ left right . 
+     case left of 
+        Zero -> True 
+        Succ l -> 
+             case right of 
+                Zero -> False 
+                Succ r -> lte l r 
+
+mod2 : (l : Nat) -> (c : Nat) -> (r : Nat) -> Nat
+mod2 = \ l centre right . case l of 
+    Zero        -> centre 
+    Succ left -> if lte centre right then centre else mod2 left (minus centre (Succ right)) right 
+
+-- data Void : Type where {}  
+
+-- neg : Type -> Type
+-- neg = \ x . (x -> Void)
+
+-- aka ex_falso_quolibet
+-- false_elim : [P:Type] -> Void -> P
+-- false_elim = \ [P] v . case v of {}
+
+modNatNZ : Nat -> (y: Nat) -> Nat -- ((y = Zero) -> Void) -> Nat
+modNatNZ = \ left right . case right of 
+    Zero -> Zero -- false_elim [Nat] (p Refl) 
+    Succ r -> mod2 left left r 
+
+-- gcd : (a : Nat) ->
+--      (b : Nat) -> {auto ok : NotBothZero a b} -> Nat
+-- gcd a 0 = a
+-- gcd 0 b = b
+-- gcd a (S b) = assert_total (gcd (S b)
+--                                (modNatNZ a (S b) SIsNotZ))
+
+-- data NotBothZero (n : Nat) (m : Nat) : Type where
+--  LeftIsNotZero  of (n : Nat) (m : Nat)[n = Succ n]
+--  RightIsNotZero of (n : Nat) (m : Nat) [m = Succ m]
+
+SIsNotZ : [x: Nat] -> (Succ x = Zero) -> Void
+SIsNotZ = \ [x] prf . contra prf
+
+gcd : (a : Nat) -> (b : Nat) -> Nat 
+gcd = \ a b . case b of 
+        Zero -> a 
+        Succ b2   -> case a of 
+                    Zero -> b2 
+                    Succ a2   -> gcd (Succ b2) (modNatNZ (Succ a2) (Succ b2)) --  (SIsNotZ [b2]))
+
+nat_eq : Nat -> Nat -> Bool
+nat_eq = \ x y .
+  case x of 
+     Zero -> case y of
+        Zero -> True
+        Succ n -> False
+     Succ m -> case y of 
+        Zero -> False
+        Succ n -> nat_eq m n
+
+relPrime : (x : Nat) -> (y : Nat) -> Bool
+relPrime = \ x y . case x of 
+                Zero -> False 
+                Succ x2 -> nat_eq (gcd (Succ x2) y) (Succ Zero)
+
+
+mkList : (n : Nat) -> (c : Nat) -> List Nat 
+mkList = \ n c . case n of 
+            Zero -> Nil  
+            Succ m -> Cons c (mkList m (Succ c)) 
+
+filter : [a:Type] -> (a -> Bool) -> List a -> List a 
+filter = \[a] f xs . case xs of 
+  Nil -> Nil
+  Cons y ys -> if f y then Cons y (filter [a] f ys) else (filter [a] f ys)
+  
+length : [a : Type] -> List a -> Nat   
+length = \[a] xs . case xs of 
+  Nil -> 0
+  Cons y ys -> plus 1 (length [a] ys)
+
+euler : (n : Nat) -> Nat 
+euler = \ n . length [Nat] (filter [Nat] (\ x . relPrime n x) (mkList n Zero)) 
+
+sum : List Nat -> Nat 
+sum = \ xs . case xs of 
+        Nil       -> Zero 
+        Cons x xs2 -> plus 1 (sum xs2)
+
+sumEuler : (n : Nat) -> Nat 
+sumEuler = \n . sum ( map [Nat] [Nat] euler (mkList n Zero))
+
+
+
+runFarms : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarms = \ [A] inList func .
+    bind [Unit] [Unit] (print "2 cores") (
+     bind [Unit] [Unit] (callFarm2 [A] inList func) (
+      bind [Unit] [Unit] (print "4 cores") (
+       bind [Unit] [Unit] (callFarm4 [A] inList func) (
+        bind [Unit] [Unit] (print "6 cores") (
+         bind [Unit] [Unit] (callFarm6 [A] inList func) ( end ))))))
 
 -- mainFunc : IO Unit                                                                                                                                                                                            
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
+genListI : (n : Nat) -> List Nat 
+genListI = \ n . case n of 
+		Zero -> Nil 
+                Succ m -> Cons 1000 (genListI m) 
+
 -- mainFunc : IO Unit 
--- mainFunc = baseRun [Nat] <40> fib
+-- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
+
+mainFunc : IO Unit 
+mainFunc = baseRun [Nat] (genListI 100) (sumEuler) 
+
 
 mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
 mapV = \[A][B][n] f v.
