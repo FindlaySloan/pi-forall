@@ -443,7 +443,7 @@ generateFunctionImpl (FunctionImpl name argNames lines) (Var varName) = do
               True  -> put (interDefs, varNumber, varStack, captureStack, tail typeStack, decls)
               False -> put (interDefs, varNumber, varStack, appendIfNotInList captureStack stringVarName,tail typeStack, decls) -- Updateing the state so the variable stack and capture stack is updated
              return ""
-          
+     
     _  -> do let syntheticVar = head varStack
              -- Updateing state
              case isDefined interDefs stringVarName of

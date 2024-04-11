@@ -100,14 +100,9 @@ listSeq = \ n c . case n of
             Zero -> Nil  
             Succ m -> Cons c (listSeq m (Succ c)) 
 
-safe2 : (p : List Nat) -> (n : Nat) -> Bool 
+safe2 : (n : Nat) -> List Nat ->  Bool 
 safe2 = 
- \ ap na . case length [Nat] ap of 
-	 Zero -> False 
-	 Succ l ->     case (plus l  1) of    
-           Zero -> False 
-           Succ m -> True
---             foldr [Bool] [Bool] (\x y . andb x y) True (mkSafeList (zip [Nat] [Nat] (listSeq 1 (length [Nat] poo)) poo) (MkTuple2 (Succ m) na))  
+ \ na ap . foldr [Bool] [Bool] (\x y . andb x y) True (mkSafeList (zip [Nat] [Nat] (listSeq 1 (length [Nat] ap)) ap) (MkTuple2 (plus (length [Nat] ap) 1) na))  
 
 makeList : (p : List (List Nat)) -> (n : List Nat) -> List (List Nat)
 makeList = \ p n . case p of 
@@ -116,7 +111,7 @@ makeList = \ p n . case p of
                         case n of 
                             Nil -> Nil 
                             Cons nH nT ->
-                                case safe2 pH nH of 
+                                case safe2 nH pH of 
                                     True -> Cons (append [Nat] pH (Cons nH Nil)) (makeList pT nT)
                                     False -> makeList pT nT
 
@@ -129,10 +124,10 @@ rainhasList = \p n linHa numero . case p of
             Cons pH pT -> case n of 
                 Nil -> Nil 
                 Cons nH nT -> case append [Nat] (listSeq linHa numero) (listSeq 1 (minus linHa 1)) of 
-                        Nil -> case safe2 pH nH of 
+                        Nil -> case safe2 nH pH of 
                                 True -> Cons (append [Nat] pH Nil) Nil 
                                 False -> Nil 
-                        Cons aH aT -> case safe2 pH nH of 
+                        Cons aH aT -> case safe2 nH pH of 
                                 True -> Cons (append [Nat] pH (Cons nH Nil)) (rainhasList pT nT linHa numero)
                                 False -> rainhasList pT nT linHa numero 
 
@@ -241,7 +236,7 @@ baseRun = \ [A] inList func .
 genListI : (n : Nat) -> List Nat
 genListI = \ n . case n of 
       Zero -> Nil
-      Succ m -> Cons 1000 (genListI m)
+      Succ m -> Cons 3 (genListI m)
 
 mainFunc : IO Unit
 mainFunc = baseRun [Nat] (genListI 1) (run)
