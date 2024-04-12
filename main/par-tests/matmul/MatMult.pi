@@ -1,0 +1,154 @@
+module MatMult where
+
+data Tuple (a : Type) (b : Type) : Type where 
+    MkTuple of (a) (b) 
+
+map : [a : Type] -> [b : Type] -> (f : a -> b) -> List a -> List b
+map = \[a] [b] f xs . case xs of
+	Nil -> Nil
+	Cons y ys -> Cons (f y) (map [a] [b] f ys) 
+
+fst : [a : Type] -> [b : Type] -> (t : Tuple a b) -> a 
+fst = \[a] [b] t . case t of 
+        MkTuple t1 t2 -> t1 
+
+snd : [a : Type] -> [b : Type] -> (t : Tuple a b) -> b 
+snd = \[a] [b] t . case t of 
+        MkTuple t1 t2 -> t2     
+
+append : [a:Type] -> List a -> List a -> List a
+append = \[a] xs ys. case xs of 
+  Nil -> ys
+  Cons x xs2 -> Cons x (append [a] xs2 ys)
+
+zipWith : [A : Type] -> [B : Type] -> [C : Type] -> (A->B->C) -> List A -> List B -> List C
+zipWith = \ [A] [B] [C] f l1 l2  . case l1 of 
+    Nil -> Nil 
+    Cons x xs -> case l2 of 
+        Nil -> Nil 
+        Cons y ys -> Cons (f x y) (zipWith [A] [B] [C] f xs ys) 
+
+plus : Nat -> Nat -> Nat
+plus = \ n m .
+  case n of
+    Zero -> m
+    Succ pred -> Succ (plus pred m)
+
+times : Nat -> Nat -> Nat
+times = \ n m .
+  case n of
+    Zero -> Zero
+    Succ pred -> plus m (times pred m)
+
+split : List (List Nat) -> Tuple (List Nat) (List (List Nat))
+split = \ls . case ls of 
+            Nil -> MkTuple Nil Nil
+            Cons y xss -> case y of 
+                Nil -> MkTuple Nil Nil
+                Cons x xs -> case split xss of 
+                                MkTuple hd tl -> MkTuple (Cons x hd) (Cons xs tl)
+
+tP : Tuple (List Nat) (List (List Nat)) -> List (List Nat) -> List (List Nat)
+tP = \tup z . case tup of 
+        MkTuple a b -> case a of 
+                        Nil -> z
+                        Cons g gs -> tP (split b) (append [List Nat] z (Cons a Nil))
+
+transpose : List (List Nat) -> List (List Nat)
+transpose = \m . tP (split m) Nil 
+
+dot : List Nat -> List Nat -> Nat 
+dot = \ lA lB . case lA of 
+        Nil -> Zero 
+        Cons x xs -> case lB of 
+                Nil -> Zero 
+                Cons y ys -> plus (times x y) (dot xs ys)
+
+rowXcol : List Nat -> List (List Nat) -> List Nat
+rowXcol = \r l . case l of 
+        Nil -> Nil 
+        Cons c cs -> Cons (dot r c) (rowXcol r cs)
+
+multP : List (List Nat) -> List (List Nat) -> List (List Nat)
+multP = \ l1 b . case l1 of 
+            Nil -> Nil 
+            Cons a as -> Cons (rowXcol a b) (multP as b)
+    
+multM : List (List Nat) -> List (List Nat) -> List (List Nat) 
+multM = \m1 m2 . multP m1 (transpose m2)
+
+add : List (List Nat) -> List (List Nat) -> List (List Nat)
+add = \l1 l2 . case l1 of 
+        Nil -> Nil 
+        Cons xs xss -> case l2 of 
+            Nil -> Nil 
+            Cons ys yss -> Cons (zipWith [Nat] [Nat] [Nat] plus xs ys) (add xss yss)
+
+-- IO Monad
+
+data IO (A : Type) : Type where
+    MkIO of (A)
+
+returnIO : [A : Type] -> A -> IO A
+returnIO = \[A] a . MkIO a
+
+bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
+bindEq = \ [A] [B] a f . case a of
+                            MkIO inner -> f inner
+
+bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
+bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
+
+print : List Char -> IO Unit
+print = TRUSTME
+
+printList : List (List Char) -> IO Unit
+printList = \ l . case l of
+  Nil -> returnIO [Unit] ()
+  Cons x xs -> bind [Unit] [Unit] (print x) (printList xs)
+
+-- Timing Functions
+
+getTime : Nat -> IO Nat
+getTime = TRUSTME
+
+-- Function to turn a Nat to String
+natToString : Nat -> List Char
+natToString = TRUSTME
+
+end : IO Unit
+end = TRUSTME
+
+
+runInIO : [A : Type] -> (f : A) -> IO Unit
+runInIO = \ [A] f . (returnIO [Unit] ())
+
+baseRun : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+baseRun = \ [A] inList func .
+  bindEq [Nat] [Unit] (getTime 0)
+    (\ startTime1 .
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+    bind [Unit] [Unit] (runInIO [List A] (map [A] [A] (func) inList)) (
+    bindEq [Nat] [Unit] (getTime 0)
+    (\ endTime1 .
+      bind [Unit] [Unit] (print (natToString endTime1)) (end)))))
+
+baseRun2 : List (List Nat) -> (List (List Nat)) -> (f : List (List Nat) -> List (List Nat) -> List (List Nat)) -> IO Unit
+baseRun2 = \ m1 m2 func .
+  bindEq [Nat] [Unit] (getTime 0)
+    (\ startTime1 .
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+     bindEq [List (List Nat)] [Unit] (returnIO [List (List Nat)] (func m1 m2)) 
+        (\result . 
+            
+             bindEq [Nat] [Unit] (getTime 0)
+             (\ endTime1 .
+               bind [Unit] [Unit] (print (natToString endTime1)) (end)))))
+
+genListI : (n : Nat) -> List Nat
+genListI = \ n . case n of 
+      Zero -> Nil
+      Succ m -> Cons 10 (genListI m)
+
+mainFunc : IO Unit
+mainFunc = baseRun2 < <1,2>, <2,3>> <<3,4> , <4,5>> (multM)
