@@ -1,0 +1,170 @@
+module NQueens where 
+
+-- data List (a : Type) : Type where
+--  Nil  
+--  Cons of (a) (List a)
+
+data Nat : Type where
+  Zero
+  Succ of (Nat)
+
+plus : Nat -> Nat -> Nat
+plus = \ n m .
+  case n of
+    Zero -> m
+    Succ pred -> Succ (plus pred m)
+
+length : [a : Type] -> List a -> Nat   
+length = \[a] xs . case xs of 
+  Nil -> 0
+  Cons y ys -> plus 1 (length [a] ys)
+
+append : [a:Type] -> List a -> List a -> List a
+append = \[a] xs ys. case xs of 
+  Nil -> ys
+  Cons x xs2 -> Cons x (append [a] xs2 ys)
+
+orb : Bool -> Bool -> Bool
+orb = \b1 b2. 
+  case b1 of 
+    True -> True
+    False -> b2
+
+andb : Bool -> Bool -> Bool
+andb = \ b1 b2. 
+  case b1 of {
+     True -> b2;
+     False -> False }
+
+nat_eq : Nat -> Nat -> Bool
+nat_eq = \ x y .
+  case x of 
+     Zero -> case y of
+        Zero -> True
+        Succ n2 -> False
+     Succ m2 -> case y of 
+        Zero -> False
+        Succ n2 -> nat_eq m2 n2
+
+negb : Bool -> Bool
+negb = \ b . if b then False else True
+
+minus : Nat -> Nat -> Nat
+minus = \n m .
+   case n of
+     Zero -> Zero
+     Succ pred -> case m of
+                    Zero -> n
+                    Succ mpred -> minus pred mpred
+
+map : [a : Type] -> [b : Type] -> (f : a -> b) -> List a -> List b
+map = \[a] [b] f xs . case xs of
+	Nil -> Nil
+	Cons y ys -> Cons (f y) (map [a] [b] f ys) 
+
+safe : Nat -> Nat -> List Nat -> Bool 
+safe = \ x d ls . case ls of 
+            Nil -> True 
+            Cons q l -> andb (andb (andb (negb (nat_eq x q)) (negb (nat_eq x (plus q d)))) (negb (nat_eq x (minus q d)))) (safe x (plus d 1) l)
+
+listSeq : (n : Nat) -> (c : Nat) -> List Nat 
+listSeq = \ n c . case c of 
+            Zero -> Nil  
+            Succ m -> Cons n (listSeq (Succ n) m) 
+
+
+-- [(q:b) | b <- [[1,2], [2,3,4]], q <- [1..10]]  
+-- [[1,1,2],[2,1,2],[3,1,2],[4,1,2],[5,1,2],[6,1,2],[7,1,2],[8,1,2],[9,1,2],[10,1,2],[1,2,3,4],[2,2,3,4],[3,2,3,4],[4,2,3,4],[5,2,3,4],[6,2,3,4],[7,2,3,4],[8,2,3,4],[9,2,3,4],[10,2,3,4]]
+
+
+
+combineWith :  Nat -> List Nat -> List Nat -> List (List Nat) -> List (List Nat)
+combineWith = \ f n orig xs zs . case n of
+  Zero -> Cons Nil Nil
+  Succ m ->
+    case  xs of
+        Nil -> case zs of 
+            Nil -> Nil 
+            Cons y ys -> combineWith f m orig orig ys 
+        Cons x2 xs2 ->
+            case zs of 
+                Nil -> Nil 
+              Cons y ys ->  if safe x2 1 y then Cons (Cons x2 y) (combineWith f m orig xs2 (Cons y ys)) else combineWith f m orig xs2 (Cons y ys)
+
+gen : List Nat -> Nat -> List (List Nat)
+gen = \ li n . case n of 
+    Zero -> Cons Nil Nil
+    Succ m -> combineWith li li (gen li nq m)
+
+nQueens : Nat -> Nat 
+nQueens = \ nq . length [List Nat] (gen (listSeq 1 nq) nq nq)
+
+
+-- IO Monad
+
+data IO (A : Type) : Type where
+    MkIO of (A)
+
+returnIO : [A : Type] -> A -> IO A
+returnIO = \[A] a . MkIO a
+
+bindEq : [A : Type] -> [B : Type] -> IO A -> (A -> IO B) -> IO B
+bindEq = \ [A] [B] a f . case a of
+                            MkIO inner -> f inner
+
+bind : [A : Type] -> [B : Type] -> IO A -> IO B -> IO B
+bind = \ [A] [B] a b . bindEq [A] [B] a (\ c . b : A -> IO B)
+
+print : List Char -> IO Unit
+print = TRUSTME
+
+printList : List (List Char) -> IO Unit
+printList = \ l . case l of
+  Nil -> returnIO [Unit] ()
+  Cons x xs -> bind [Unit] [Unit] (print x) (printList xs)
+
+-- Timing Functions
+
+getTime : Nat -> IO Nat
+getTime = TRUSTME
+
+-- Function to turn a Nat to String
+natToString : Nat -> List Char
+natToString = TRUSTME
+
+end : IO Unit
+end = TRUSTME
+
+
+runInIO : [A : Type] -> (f : A) -> IO Unit
+runInIO = \ [A] f . (returnIO [Unit] ())
+
+baseRun : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+baseRun = \ [A] inList func .
+  bindEq [Nat] [Unit] (getTime 0)
+    (\ startTime1 .
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+    bind [Unit] [Unit] (runInIO [List A] (map [A] [A] (func) inList)) (
+    bindEq [Nat] [Unit] (getTime 0)
+    (\ endTime1 .
+      bind [Unit] [Unit] (print (natToString endTime1)) (end)))))
+
+baseRun2 : Nat -> (f : Nat -> Nat) -> IO Unit
+baseRun2 = \ inp func .
+  bindEq [Nat] [Unit] (getTime 0)
+    (\ startTime1 .
+    bind [Unit] [Unit] (print (natToString startTime1)) (
+     bindEq [Nat] [Unit] (returnIO [Nat] (func inp)) 
+        (\result . 
+            bind [Unit] [Unit] (print (natToString result)) (
+             bindEq [Nat] [Unit] (getTime 0)
+             (\ endTime1 .
+               bind [Unit] [Unit] (print (natToString endTime1)) (end))))))
+
+genListI : (n : Nat) -> List Nat
+genListI = \ n . case n of 
+      Zero -> Nil
+      Succ m -> Cons 10 (genListI m)
+
+mainFunc : IO Unit
+mainFunc = baseRun2 9 (nQueens)

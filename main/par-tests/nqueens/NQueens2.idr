@@ -41,10 +41,10 @@ append xs ys = case xs of
 
 
 combineWith : (Nat -> List Nat -> Bool) -> List Nat -> List Nat -> List (List Nat) -> List (List Nat)
-combineWith f or [] ys = combineWith f or or ys 
 combineWith f or xs [] = []
-combineWith f (x::xs) (y::ys) = if f x y then (x :: y) :: (combineWith f or xs (y::ys)) else combineWith f or xs (y::ys) 
+combineWith f or [] (y::ys) = combineWith f or or ys 
+combineWith f or (x::xs) (y::ys) = if f x y then (x :: y) :: (combineWith f or xs (y::ys)) else combineWith f or xs (y::ys) 
  
 gen : Nat -> Nat -> List (List Nat)
 gen nq Z = [ [] ]
-gen nq n = combineWith (\q,b => safe q 1 b) (listSeq 1 nq) (gen nq (minus n 1))
+gen nq n = combineWith (\q,b => safe q 1 b) (listSeq 1 nq) (listSeq 1 nq) (gen nq (minus n 1))
