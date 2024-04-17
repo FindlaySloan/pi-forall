@@ -72,10 +72,16 @@ rowXcol = \r l . case l of
 multP : List (List Nat) -> List (List Nat) -> List (List Nat)
 multP = \ l1 b . case l1 of 
             Nil -> Nil 
-            Cons a as -> Cons (rowXcol a b) (multP as b)
+            Cons a as -> Cons (rowXcol a b) (multP as b) -- zip input lists then farm rowXcol 
     
+multPar : List (List Nat) -> List (List Nat) -> List (List Nat)
+multPar = \ l1 b . map [List Nat] [List Nat] (\a . rowXcol a b) l1 
+
 multM : List (List Nat) -> List (List Nat) -> List (List Nat) 
 multM = \m1 m2 . multP m1 (transpose m2)
+
+multMPar : List (List Nat) -> List (List Nat) -> List (List Nat)
+multMPar = \m1 m2 . multPar m1 (transpose m2)
 
 add : List (List Nat) -> List (List Nat) -> List (List Nat)
 add = \l1 l2 . case l1 of 
