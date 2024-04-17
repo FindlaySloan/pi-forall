@@ -1049,4 +1049,4 @@ genMatrix = \ m n . case m of
 
 
 mainFunc : IO Unit 
-mainFunc = runFarms1 [List (List Nat)] <genMatrix 100 100> (multMPar) 
+mainFunc = runFarms1 [List Nat] (genMatrix 300 300) (\a . rowXcol a (transpose (genMatrix 300 300))) 
