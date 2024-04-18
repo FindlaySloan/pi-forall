@@ -1137,7 +1137,7 @@ genListI = \ n . case n of
 -- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 mainFunc : IO Unit 
-mainFunc = baseRun [Nat] (genListI 100) (sumEuler) 
+mainFunc = baseRun [Nat] (genListI 1) (sumEuler) 
 
 
 mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n
