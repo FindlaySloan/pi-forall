@@ -1109,11 +1109,52 @@ genListI = \ n . case n of
 -- mainFunc : IO Unit 
 -- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
+runFarmsSum4 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarmsSum4 = \ [A] inList func .
+                           bind [Unit] [Unit] (print "26 cores") (
+                              bind [Unit] [Unit] (runFarmSum 26 inList)) (
+                                bind [Unit] [Unit] (print "28 cores") (
+                                 bind [Unit] [Unit] (runFarmSum 28 inList)) (end))
+
+runFarmsSum3 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarmsSum3 = \ [A] inList func .
+                 bind [Unit] [Unit] (print "18 cores") (
+                    bind [Unit] [Unit] (runFarmSum 18 inList)) (
+                     bind [Unit] [Unit] (print "20 cores") (
+                       bind [Unit] [Unit] (runFarmSum 20 inList)) (
+                        bind [Unit] [Unit] (print "22 cores") (
+                         bind [Unit] [Unit] (runFarmSum 22 inList)) (
+                          bind [Unit] [Unit] (print "24 cores") (
+                            bind [Unit] [Unit] (runFarmSum 24 inList)) (runFarmsSum4 [A] inList func))))
+
+runFarmsSum2 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarmsSum2 = \ [A] inList func .
+          bind [Unit] [Unit] (print "10 cores") (
+            bind [Unit] [Unit] (runFarmSum 10 inList)) (
+             bind [Unit] [Unit] (print "12 cores") (
+              bind [Unit] [Unit] (runFarmSum 12 inList)) (
+               bind [Unit] [Unit] (print "14 cores") (
+                bind [Unit] [Unit] (runFarmSum 14 inList)) (
+                 bind [Unit] [Unit] (print "16 cores") (
+                  bind [Unit] [Unit] (runFarmSum 16 inList)) (runFarmsSum3 [A] inList func))))
+
+runFarmsSum : [A : Type] -> List A -> (f : A -> A) -> IO Unit
+runFarmsSum = \ [A] inList func .
+   bind [Unit] [Unit] (print "2 cores") (
+    bind [Unit] [Unit] (runFarmSum 2 inList) (
+     bind [Unit] [Unit] (print "4 cores") (
+      bind [Unit] [Unit] runFarmSum 4 inList) (
+       bind [Unit] [Unit] (print "6 cores") (
+        bind [Unit] [Unit] runFarmSum 6 inList) (
+         bind [Unit] [Unit] (print "8 cores") (
+          bind [Unit] [Unit] (runFarmSum 8 inList)) ( runFarmsSum2 [A] inList func)))))
+
+
 mainFunc : IO Unit 
 mainFunc = bind 
             [Maybe Nat]
             [Unit]
-            (runFarmSum 28 (mkList 1000 Zero)) 
+            (runFarmsSum (mkList 1000 Zero)) 
             end
 
 
