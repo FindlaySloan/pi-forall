@@ -1131,7 +1131,7 @@ runFarms = \ [A] inList func .
 genListI : (n : Nat) -> List Nat 
 genListI = \ n . case n of 
 		Zero -> Nil 
-                Succ m -> Cons 1000 (genListI m) 
+                Succ m -> Cons 2000 (genListI m) 
 
 -- mainFunc : IO Unit 
 -- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib

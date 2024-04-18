@@ -946,16 +946,15 @@ runFarmSimple = \ [A] inList func numWorkers n pidSet x pidsToAdd m chidSet y ch
                           ( \ mresult . case mresult of
                             Just result ->
                               let (output, rest1) = result in 
-
-                              bindEq [Nat] [Maybe (List A)] 
-                              (getTime 0)
-                              (\ endTime . 
-                                bind [Unit] [Maybe (List A)] 
-                                (print (natToString endTime)) (
-                                 returnIO
-                                [Maybe (List A)]
-                                (Just (output))
-                              )
+                               bindEq [Nat] [Maybe (List A)] 
+                               (getTime 0)
+                               (\ endTime . 
+                                 bind [Unit] [Maybe (List A)] 
+                                 (print (natToString endTime)) (
+                                  returnIO
+                                 [Maybe (List A)]
+                                 (Just (output))
+                               ))
 
  
                             Nothing -> 
@@ -1163,7 +1162,7 @@ mainFunc : IO Unit
 mainFunc = bind 
             [Unit]
             [Unit]
-            (runFarmsSum (mkList 1000 Zero)) 
+            (runFarmsSum (mkList 2000 Zero)) 
             end
 
 
