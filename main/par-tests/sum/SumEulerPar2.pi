@@ -1,4 +1,4 @@
-module SumEulerPar where
+module SumEulerPar2 where
 
 -- Data types
 
@@ -1081,166 +1081,22 @@ callFarmSimple2 = \ [A] nw inList func .
                         --      \ mResult . sum mResult 
                         --    )
 			    -- end
-callFarm2 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm2 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 3 | newPidSet = (((genList 2) ) : Vec Nat 3)} * {newChidSet : Vec Nat 3 | newChidSet = (((genList 2)) : Vec Nat 3)})]
-                            [Unit]
-                            (runFarm [A] inList func 2 0 NilV 3 (genList 2) 0 NilV 3 (genList 2))
-                            end
 
 
-callFarm4 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm4 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 5 | newPidSet = (((genList 4) ) : Vec Nat 5)} * {newChidSet : Vec Nat 5 | newChidSet = (((genList 4)) : Vec Nat 5)})]
-                            [Unit]
-                            (runFarm [A] inList func 4 0 NilV 5 (genList 4) 0 NilV 5 (genList 4))
-                            end
+runFarmSum :  (nw : Nat) -> List Nat -> IO (Maybe Nat) 
+runFarmSum = \nw l . 
+                bindEq 
+                [Maybe (List Nat)] 
+                [Maybe Nat]
+                (callFarmSimple2 [Nat] nw l euler) (
+                    \result . case result of 
+                        Just res -> returnIO [Maybe Nat] (Just (sum res)) 
+                        Nothing -> returnIO [Maybe Nat] Nothing 
+                )
 
-callFarm6 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm6 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 7 | newPidSet = (((genList 6) ) : Vec Nat 7)} * {newChidSet : Vec Nat 7 | newChidSet = (((genList 6)) : Vec Nat 7)})]
-                            [Unit]
-                            (runFarm [A] inList func 6 0 NilV 7 (genList 6) 0 NilV 7 (genList 6))
-                            end
+-- sumEuler : (n : Nat) -> Nat 
+-- sumEuler = \n . sum ( map [Nat] [Nat] euler (mkList n Zero))
 
-callFarm8 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm8 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 9 | newPidSet = (((genList 8) ) : Vec Nat 9)} * {newChidSet : Vec Nat 9 | newChidSet = (((genList 8)) : Vec Nat 9)})]
-                            [Unit]
-                            (runFarm [A] inList func 8 0 NilV 9 (genList 8) 0 NilV 9 (genList 8))
-                            end
-
-callFarm10 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm10 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 11 | newPidSet = (((genList 10) ) : Vec Nat 11)} * {newChidSet : Vec Nat 11 | newChidSet = (((genList 10)) : Vec Nat 11)})]
-                            [Unit]
-                            (runFarm [A] inList func 10 0 NilV 11 (genList 10) 0 NilV 11 (genList 10))
-                            end
-
-callFarm12 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm12 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 13 | newPidSet = (((genList 12) ) : Vec Nat 13)} * {newChidSet : Vec Nat 13 | newChidSet = (((genList 12)) : Vec Nat 13)})]
-                            [Unit]
-                            (runFarm [A] inList func 12 0 NilV 13 (genList 12) 0 NilV 13 (genList 12))
-                            end
-
-callFarm14 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm14 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 15 | newPidSet = (((genList 14) ) : Vec Nat 15)} * {newChidSet : Vec Nat 15 | newChidSet = (((genList 14)) : Vec Nat 15)})]
-                            [Unit]
-                            (runFarm [A] inList func 14 0 NilV 15 (genList 14) 0 NilV 15 (genList 14))
-                            end
-
-callFarm16 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm16 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 17 | newPidSet = (((genList 16) ) : Vec Nat 17)} * {newChidSet : Vec Nat 17 | newChidSet = (((genList 16)) : Vec Nat 17)})]
-                            [Unit]
-                            (runFarm [A] inList func 16 0 NilV 17 (genList 16) 0 NilV 17 (genList 16))
-                            end
-
-callFarm18 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm18 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 19 | newPidSet = (((genList 18) ) : Vec Nat 19)} * {newChidSet : Vec Nat 19 | newChidSet = (((genList 18)) : Vec Nat 19)})]
-                            [Unit]
-                            (runFarm [A] inList func 18 0 NilV 19 (genList 18) 0 NilV 19 (genList 18))
-                            end
-
-callFarm20 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm20 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 21 | newPidSet = (((genList 20) ) : Vec Nat 21)} * {newChidSet : Vec Nat 21 | newChidSet = (((genList 20)) : Vec Nat 21)})]
-                            [Unit]
-                            (runFarm [A] inList func 20 0 NilV 21 (genList 20) 0 NilV 21 (genList 20))
-                            end
-
-callFarm22 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm22 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 23 | newPidSet = (((genList 22) ) : Vec Nat 23)} * {newChidSet : Vec Nat 23 | newChidSet = (((genList 22)) : Vec Nat 23)})]
-                            [Unit]
-                            (runFarm [A] inList func 22 0 NilV 23 (genList 22) 0 NilV 23 (genList 22))
-                            end
-
-callFarm24 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm24 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 25 | newPidSet = (((genList 24) ) : Vec Nat 25)} * {newChidSet : Vec Nat 25 | newChidSet = (((genList 24)) : Vec Nat 25)})]
-                            [Unit]
-                            (runFarm [A] inList func 24 0 NilV 25 (genList 24) 0 NilV 25 (genList 24))
-                            end
-
-callFarm26 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm26 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 27 | newPidSet = (((genList 26) ) : Vec Nat 27)} * {newChidSet : Vec Nat 27 | newChidSet = (((genList 26)) : Vec Nat 27)})]
-                            [Unit]
-                            (runFarm [A] inList func 26 0 NilV 27 (genList 26) 0 NilV 27 (genList 26))
-                            end
-
-callFarm28 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-callFarm28 = \ [A] inList func .
-                            bind
-                            [Maybe ({newPidSet : Vec Nat 29 | newPidSet = (((genList 28) ) : Vec Nat 29)} * {newChidSet : Vec Nat 29 | newChidSet = (((genList 28)) : Vec Nat 29)})]
-                            [Unit]
-                            (runFarm [A] inList func 28 0 NilV 29 (genList 28) 0 NilV 29 (genList 28))
-                            end
-
-
--- mainFunc : IO Unit
--- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
-
-
-
-
-
-runFarms4 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-runFarms4 = \ [A] inList func .
-                           bind [Unit] [Unit] (print "26 cores") (
-                              bind [Unit] [Unit] (callFarm26 [A] inList func) (
-                                bind [Unit] [Unit] (print "28 cores") (
-                                 bind [Unit] [Unit] (callFarm28 [A] inList func) (end))))
-
-runFarms3 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-runFarms3 = \ [A] inList func .
-                 bind [Unit] [Unit] (print "18 cores") (
-                    bind [Unit] [Unit] (callFarm18 [A] inList func) (
-                     bind [Unit] [Unit] (print "20 cores") (
-                       bind [Unit] [Unit] (callFarm20 [A] inList func) (
-                        bind [Unit] [Unit] (print "22 cores") (
-                         bind [Unit] [Unit] (callFarm22 [A] inList func) (
-                          bind [Unit] [Unit] (print "24 cores") (
-                            bind [Unit] [Unit] (callFarm24 [A] inList func) (runFarms4 [A] inList func))))))))
-
-runFarms2 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-runFarms2 = \ [A] inList func .
-          bind [Unit] [Unit] (print "10 cores") (
-            bind [Unit] [Unit] (callFarm10 [A] inList func) (
-             bind [Unit] [Unit] (print "12 cores") (
-              bind [Unit] [Unit] (callFarm12 [A] inList func) (
-               bind [Unit] [Unit] (print "14 cores") (
-                bind [Unit] [Unit] (callFarm14 [A] inList func) (
-                 bind [Unit] [Unit] (print "16 cores") (
-                  bind [Unit] [Unit] (callFarm16 [A] inList func) (runFarms3 [A] inList func))))))))
-
-runFarms1 : [A : Type] -> List A -> (f : A -> A) -> IO Unit
-runFarms1 = \ [A] inList func .
-   bind [Unit] [Unit] (print "2 cores") (
-    bind [Unit] [Unit] (callFarm2 [A] inList func) (
-     bind [Unit] [Unit] (print "4 cores") (
-      bind [Unit] [Unit] (callFarm4 [A] inList func) (
-       bind [Unit] [Unit] (print "6 cores") (
-        bind [Unit] [Unit] (callFarm6 [A] inList func) (
-         bind [Unit] [Unit] (print "8 cores") (
-          bind [Unit] [Unit] (callFarm8 [A] inList func) ( runFarms2 [A] inList func))))))))
 
 -- mainFunc : IO Unit                                                                                                                                                                                            
 -- mainFunc = runFarms [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
@@ -1254,7 +1110,11 @@ genListI = \ n . case n of
 -- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 mainFunc : IO Unit 
-mainFunc = runFarms1 [Nat] (genListI 100) (sumEuler) 
+mainFunc = bind 
+            [Maybe Nat]
+            [Unit]
+            (runFarmSum 28 (mkList 1000 Zero)) 
+            end
 
 
 
