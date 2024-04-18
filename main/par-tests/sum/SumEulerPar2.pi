@@ -946,9 +946,18 @@ runFarmSimple = \ [A] inList func numWorkers n pidSet x pidsToAdd m chidSet y ch
                           ( \ mresult . case mresult of
                             Just result ->
                               let (output, rest1) = result in 
-                                returnIO
+
+                              bindEq [Nat] [Maybe (List A)] 
+                              (getTime 0)
+                              (\ endTime . 
+                                bind [Unit] [Maybe (List A)] 
+                                (print (natToString endTime)) (
+                                 returnIO
                                 [Maybe (List A)]
-                                (Just (output)) 
+                                (Just (output))
+                              )
+
+ 
                             Nothing -> 
                               returnIO 
                               [Maybe (List A)]
