@@ -1111,7 +1111,7 @@ sum = \ xs . case xs of
         Nil       -> Zero 
         Cons x xs2 -> plus 1 (sum xs2)
 
-sumEuler : (n : Nat) -> Nat 
+sumEuler : Nat -> Nat 
 sumEuler = \n . sum ( map [Nat] [Nat] euler (mkList n Zero))
 
 
@@ -1131,13 +1131,13 @@ runFarms = \ [A] inList func .
 genListI : (n : Nat) -> List Nat 
 genListI = \ n . case n of 
 		Zero -> Nil 
-                Succ m -> Cons 2000 (genListI m) 
+                Succ m -> Cons 4000 (genListI m) 
 
 -- mainFunc : IO Unit 
 -- mainFunc = baseRun [Nat] <42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42> fib
 
 mainFunc : IO Unit 
-mainFunc = baseRun [Nat] (genListI 1) (sumEuler) 
+mainFunc = baseRun [Nat] <8000> (sumEuler) 
 
 
 mapV : [A:Type] -> [B:Type] -> [n:Nat] -> (A -> B) -> Vec A n -> Vec B n

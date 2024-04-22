@@ -1165,7 +1165,7 @@ mainFunc : IO Unit
 mainFunc = bind 
             [Unit]
             [Unit]
-            (runFarmsSum (mkList 2000 Zero)) 
+            (runFarmsSum (mkList 8000 Zero)) 
             end
 
 
